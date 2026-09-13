@@ -6,7 +6,8 @@ import {nostrToolsCryptoAdapter} from '../../../infrastructure/nostr/crypto/nost
 import type {IIdentitySessionStore} from '../application/ports/IIdentitySessionStore';
 
 /**
- * Signs with the local secret key loaded from secure storage on each use.
+ * Signs with the local secret key from secure storage.
+ * The session store unlocks the key once per app session (biometric), then caches it.
  */
 export class LocalSigner implements ISigner {
   constructor(private readonly store: IIdentitySessionStore) {}
