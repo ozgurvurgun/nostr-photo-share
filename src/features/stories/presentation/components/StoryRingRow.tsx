@@ -227,6 +227,6 @@ function shortPubkey(pubkeyHex: string): string {
   if (pubkeyHex.length < 8) {
     return pubkeyHex;
   }
-  return `${pubkeyHex.slice(0, 4)}…${pubkeyHex.slice(-4)}`;
+  return `${pubkeyHex.slice(0, 4)}...${pubkeyHex.slice(-4)}`;
 }
 

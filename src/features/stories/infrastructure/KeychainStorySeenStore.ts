@@ -66,7 +66,7 @@ export class KeychainStorySeenStore implements IStorySeenStore {
         }
       }
     } catch {
-      // Corrupt or unavailable storage — start empty.
+      // Corrupt or unavailable storage - start empty.
     }
   }
 

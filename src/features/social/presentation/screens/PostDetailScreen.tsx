@@ -75,7 +75,7 @@ function CommentRow({
     if (p?.name) {
       return p.name;
     }
-    return `${comment.authorPubkeyHex.slice(0, 8)}…`;
+    return `${comment.authorPubkeyHex.slice(0, 8)}...`;
   }, [profile.data, comment.authorPubkeyHex]);
 
   return (

@@ -1,4 +1,4 @@
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import type {SignedNostrEvent} from '../../../infrastructure/nostr/protocol/event';
 import type {ContactEntry} from '../domain/FollowList';
 import {FollowList} from '../domain/FollowList';

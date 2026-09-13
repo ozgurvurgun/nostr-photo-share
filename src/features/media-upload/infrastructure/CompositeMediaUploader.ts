@@ -1,4 +1,4 @@
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import {MediaUploadError} from '../domain/errors';
 import type {
   IMediaUploader,

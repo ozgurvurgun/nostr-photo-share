@@ -1,7 +1,30 @@
 import {ImageAttachment, validateSelectedImage} from './ImageAttachment';
-import {DEFAULT_IMAGE_CONSTRAINTS, resolveImageMimeType} from './ImageConstraints';
+import {
+  DEFAULT_IMAGE_CONSTRAINTS,
+  detectImageMimeFromBytes,
+  resolveImageMimeType,
+} from './ImageConstraints';
 
 describe('ImageAttachment / validation', () => {
+  it('detects jpeg png and webp magic bytes', () => {
+    expect(detectImageMimeFromBytes(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe(
+      'image/jpeg',
+    );
+    expect(
+      detectImageMimeFromBytes(
+        new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      ),
+    ).toBe('image/png');
+    expect(
+      detectImageMimeFromBytes(
+        new Uint8Array([
+          0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+        ]),
+      ),
+    ).toBe('image/webp');
+    expect(detectImageMimeFromBytes(new Uint8Array([0x00, 0x01, 0x02]))).toBeNull();
+  });
+
   it('accepts valid jpeg metadata', () => {
     const result = ImageAttachment.create({
       url: 'https://cdn.example/abc.jpg',

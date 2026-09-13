@@ -18,7 +18,7 @@ import {Nip46SignerAdapter} from './Nip46SignerAdapter';
 
 /**
  * Shared SimplePool for all NIP-46 bunker sessions in this process.
- * RelayPool is not an AbstractSimplePool, so bunkers keep a dedicated pool —
+ * RelayPool is not an AbstractSimplePool, so bunkers keep a dedicated pool -
  * sharing one instance avoids opening duplicate sockets per connect/restore.
  */
 let sharedNip46Pool: SimplePool | null = null;

@@ -1,4 +1,4 @@
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import type {SignedNostrEvent} from '../../../infrastructure/nostr/protocol/event';
 import {InvalidImagePostError} from '../domain/errors';
 import {
@@ -25,7 +25,7 @@ type ImetaFields = {
 };
 
 /**
- * Maps durable NIP-68 kind:20 events → ImagePost.
+ * Maps durable NIP-68 kind:20 events -> ImagePost.
  * Events with NIP-40 expiration are stories (see Kind20StoryMapper), not feed posts.
  * V1 reads only the first valid imeta image.
  */

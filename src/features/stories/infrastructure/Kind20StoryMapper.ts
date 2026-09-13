@@ -1,4 +1,4 @@
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import type {SignedNostrEvent} from '../../../infrastructure/nostr/protocol/event';
 import {InvalidStoryError} from '../domain/errors';
 import {
@@ -24,7 +24,7 @@ type ImetaFields = {
 };
 
 /**
- * Maps NIP-68 kind:20 + NIP-40 expiration events → Story.
+ * Maps NIP-68 kind:20 + NIP-40 expiration events -> Story.
  * Durable kind:20 posts (no expiration) are rejected here and belong in the feed.
  */
 export const Kind20StoryMapper = {

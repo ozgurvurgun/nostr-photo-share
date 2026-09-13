@@ -2,9 +2,9 @@ export type Nip05Status = 'none' | 'unverified' | 'verified' | 'failed';
 
 export type Profile = {
   readonly pubkeyHex: string;
-  /** Username — kind:0 `name` (NIP-24). */
+  /** Username - kind:0 `name` (NIP-24). */
   readonly name: string;
-  /** Display name — kind:0 `display_name`. */
+  /** Display name - kind:0 `display_name`. */
   readonly displayName: string;
   readonly about: string;
   /** Avatar URL (V1: URL string only). */

@@ -95,7 +95,7 @@ function FeedPostCardInner({
         return p.name;
       }
     }
-    return `${post.authorPubkeyHex.slice(0, 8)}…`;
+    return `${post.authorPubkeyHex.slice(0, 8)}...`;
   }, [profile.data, post.authorPubkeyHex]);
 
   const triggerLike = useCallback(() => {

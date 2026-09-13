@@ -13,9 +13,13 @@ jest.mock('react-native-keychain', () => {
   const ACCESSIBLE = {
     WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'AccessibleWhenUnlockedThisDeviceOnly',
   };
+  const ACCESS_CONTROL = {
+    BIOMETRY_ANY_OR_DEVICE_PASSCODE: 'BiometryAnyOrDevicePasscode',
+  };
 
   return {
     ACCESSIBLE,
+    ACCESS_CONTROL,
     setGenericPassword: jest.fn(async (username, password, options = {}) => {
       const service = options.service ?? 'default';
       mockMemory.set(service, {username, password});

@@ -60,5 +60,5 @@ export function storyTitleFromCaption(caption: string): string {
   if (trimmed.length <= 80) {
     return trimmed;
   }
-  return `${trimmed.slice(0, 77)}…`;
+  return `${trimmed.slice(0, 77)}...`;
 }

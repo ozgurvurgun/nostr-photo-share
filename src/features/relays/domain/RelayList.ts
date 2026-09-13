@@ -73,7 +73,7 @@ export class RelayList {
     );
   }
 
-  /** Empty list (no preferences) for an owner — used before defaults are applied. */
+  /** Empty list (no preferences) for an owner - used before defaults are applied. */
   static empty(ownerPubkeyHex: string): Result<RelayList, InvalidRelayListError> {
     return RelayList.create({
       ownerPubkeyHex,

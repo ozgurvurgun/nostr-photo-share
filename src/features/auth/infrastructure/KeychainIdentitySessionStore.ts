@@ -14,6 +14,12 @@ const SESSION_USERNAME = 'identity.session';
 
 const KEYCHAIN_OPTIONS = {
   accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+  authenticationPrompt: {
+    title: 'Still',
+    subtitle: 'Kimligini dogrula',
+    cancel: 'Iptal',
+  },
 } as const;
 
 export class KeychainIdentitySessionStore implements IIdentitySessionStore {

@@ -122,11 +122,11 @@ export class NostrGateway {
       throw validated.error;
     }
     const writeUrls = this.getWriteRelayUrls?.() ?? null;
-    // null → no NIP-65 routing configured → all wanted
+    // null -> no NIP-65 routing configured -> all wanted
     if (writeUrls === null) {
       return this.pool.publish(validated.value);
     }
-    // Explicit empty write set → do not fall through to all relays
+    // Explicit empty write set -> do not fall through to all relays
     if (writeUrls.length === 0) {
       this.logger.warn('Refused to publish: NIP-65 write relay set is empty');
       return [

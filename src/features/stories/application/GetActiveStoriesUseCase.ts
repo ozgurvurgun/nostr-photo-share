@@ -23,7 +23,7 @@ export type GetActiveStoriesInput = ActiveStoriesQuery & {
 
 /**
  * Loads active stories (kind:20 + NIP-40 expiration), filters expired client-side,
- * groups by author, caches. Expired story ≠ deleted relay event — never rely on relay deletion.
+ * groups by author, caches. Expired story != deleted relay event - never rely on relay deletion.
  */
 export class GetActiveStoriesUseCase {
   constructor(

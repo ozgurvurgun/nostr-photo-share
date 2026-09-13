@@ -6,7 +6,7 @@ import type {IRelayListRepository} from './ports/IRelayListRepository';
 
 /**
  * Loads the viewer's kind:10002 list.
- * Empty fetch does not wipe a richer cached (published) list — timeouts must not reset to defaults.
+ * Empty fetch does not wipe a richer cached (published) list - timeouts must not reset to defaults.
  * Defaults are only seeded when there is no published/cached preference set.
  */
 export class GetRelayListUseCase {

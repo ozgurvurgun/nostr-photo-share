@@ -32,6 +32,10 @@ import {FeedPostCard} from '../components/FeedPostCard';
 import {FeedSkeletonList} from '../components/FeedSkeletonList';
 import {flattenFeedPosts, useFeed} from '../hooks/useFeed';
 import {useRelayOnline} from '../hooks/useRelayOnline';
+import type {AuthorStoryStack} from '../../../stories/application/GetActiveStoriesUseCase';
+
+const EMPTY_PUBKEYS: readonly string[] = [];
+const EMPTY_STORY_STACKS: readonly AuthorStoryStack[] = [];
 
 /** Home tab inside MainTabs; stack navigate still reaches App routes. */
 export type FeedScreenProps = {
@@ -48,7 +52,10 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
 
   const selfPubkey = identity?.publicKey.toHex().trim().toLowerCase() ?? '';
   const followListReady = followListQuery.isFetched || followListQuery.isError;
-  const followed = followListQuery.data?.followedPubkeys() ?? [];
+  const followed = useMemo(
+    () => followListQuery.data?.followedPubkeys() ?? EMPTY_PUBKEYS,
+    [followListQuery.data],
+  );
   const hasFollows = followed.length > 0;
   const feedAuthors = useMemo(() => {
     if (!followListReady || !hasFollows || selfPubkey.length === 0) {
@@ -58,7 +65,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
   }, [followListReady, followed, hasFollows, selfPubkey]);
 
   const storyAuthors = feedAuthors;
-  useOutboxDiscovery(hasFollows ? followed : []);
+  useOutboxDiscovery(hasFollows ? followed : EMPTY_PUBKEYS);
 
   const feed = useFeed({
     authors: feedAuthors,
@@ -84,7 +91,10 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
     (!followListReady || feed.isPending) && posts.length === 0;
   const isFatalError = feed.isError && posts.length === 0 && followListReady;
   const showInlineError = feed.isError && posts.length > 0;
-  const storyStacks = stories.data?.byAuthor ?? [];
+  const storyStacks = useMemo(
+    () => stories.data?.byAuthor ?? EMPTY_STORY_STACKS,
+    [stories.data?.byAuthor],
+  );
 
   const onRefresh = useCallback(() => {
     void feed.refetch();

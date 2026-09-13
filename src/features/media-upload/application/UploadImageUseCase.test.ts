@@ -13,7 +13,10 @@ import type {
 import {MediaUploadError} from '../domain/errors';
 import type {SelectedImage} from '../domain/ImageAttachment';
 
-const SAMPLE_BYTES = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+/** Minimal JPEG SOI + APP0 marker so magic-byte checks pass. */
+const SAMPLE_BYTES = new Uint8Array([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+]);
 const SAMPLE_HASH = bytesToHex(sha256(SAMPLE_BYTES));
 
 const selected: SelectedImage = {
@@ -63,7 +66,6 @@ class FakeMediaUploader implements IMediaUploader {
   }
 }
 
-
 const fakeHasher: IBlobHasher = {
   sha256Hex(bytes) {
     return bytesToHex(sha256(bytes));
@@ -91,6 +93,48 @@ describe('UploadImageUseCase', () => {
     expect(uploader.calls[0]?.sha256).toBe(SAMPLE_HASH);
     expect(progress.length).toBeGreaterThan(0);
     expect(progress[progress.length - 1]).toBe(1);
+  });
+
+  it('rejects bytes that are not a supported image container', async () => {
+    const uploader = new FakeMediaUploader();
+    const useCase = new UploadImageUseCase(
+      fakePicker(),
+      fakeReader(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])),
+      uploader,
+      fakeHasher,
+    );
+
+    const result = await useCase.execute({selected});
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.error.code).toBe('INVALID_IMAGE');
+    expect(result.error.message).toMatch(/supported/i);
+    expect(uploader.calls).toHaveLength(0);
+  });
+
+  it('rejects MIME mismatch between declaration and magic bytes', async () => {
+    const uploader = new FakeMediaUploader();
+    const pngHeader = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    ]);
+    const useCase = new UploadImageUseCase(
+      fakePicker(),
+      fakeReader(pngHeader),
+      uploader,
+      fakeHasher,
+    );
+
+    const result = await useCase.execute({
+      selected: {...selected, sizeBytes: pngHeader.byteLength},
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.error.message).toMatch(/does not match/i);
+    expect(uploader.calls).toHaveLength(0);
   });
 
   it('does not invent a url when uploader fails', async () => {

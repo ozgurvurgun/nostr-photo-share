@@ -6,7 +6,6 @@ import {
   Image,
   Pressable,
   RefreshControl,
-  Text,
   View,
 } from 'react-native';
 import {t} from '../../../../shared/i18n';

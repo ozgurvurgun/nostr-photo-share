@@ -48,7 +48,7 @@ export class Nip05Identifier {
     return `${this.local}@${this.domain}`;
   }
 
-  /** UI label: `_@domain` → `domain`, otherwise `local@domain`. */
+  /** UI label: `_@domain` -> `domain`, otherwise `local@domain`. */
   displayLabel(): string {
     if (this.local === '_') {
       return this.domain;

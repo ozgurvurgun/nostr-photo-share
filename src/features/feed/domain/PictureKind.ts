@@ -2,7 +2,7 @@
 export const PICTURE_EVENT_KIND = 20 as const;
 
 /**
- * NIP-40 expiration tag present → treat as ephemeral (story), not a durable feed post.
+ * NIP-40 expiration tag present -> treat as ephemeral (story), not a durable feed post.
  */
 export function hasExpirationTag(tags: readonly (readonly string[])[]): boolean {
   return tags.some(tag => tag[0] === 'expiration' && (tag[1]?.trim().length ?? 0) > 0);

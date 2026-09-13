@@ -93,6 +93,7 @@ export function StoryViewerScreen({
   }, [stories, authorPubkeyHex, initialStoryId, seenIds]);
 
   const current: Story | undefined = stories[index];
+  const currentId = current?.id;
 
   const close = useCallback(() => {
     navigation.goBack();
@@ -119,14 +120,14 @@ export function StoryViewerScreen({
   }, []);
 
   useEffect(() => {
-    if (!current) {
+    if (!currentId) {
       return;
     }
-    markSeen.mutate(current.id);
-  }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- mark once per story id
+    markSeen.mutate(currentId);
+  }, [currentId]); // eslint-disable-line react-hooks/exhaustive-deps -- mark once per story id
 
   useEffect(() => {
-    if (!current) {
+    if (!currentId) {
       return;
     }
     setProgress(0);
@@ -141,7 +142,7 @@ export function StoryViewerScreen({
       }
     }, 50);
     return () => clearInterval(tick);
-  }, [current?.id, goNext, storyDwellMs]);
+  }, [currentId, goNext, storyDwellMs]);
 
   if (storiesQuery.isPending && stories.length === 0) {
     return (

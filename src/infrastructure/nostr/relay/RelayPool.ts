@@ -222,7 +222,7 @@ export class RelayPool {
 
   /**
    * Publish to specific relays (write set).
-   * Does not permanently expand the wanted set — temporary relays are removed after.
+   * Does not permanently expand the wanted set - temporary relays are removed after.
    * An explicit empty list returns no results (caller must not treat as success).
    */
   async publishTo(
@@ -500,10 +500,12 @@ export class RelayPool {
     try {
       while (!this.disposed && this.wanted.has(url)) {
         const attempt = this.reconnectAttempts.get(url) ?? 0;
-        const delayMs = Math.min(
+        const baseDelayMs = Math.min(
           this.options.reconnectDelayMs * 2 ** attempt,
           maxDelay,
         );
+        // Full jitter avoids reconnect stampedes across clients.
+        const delayMs = Math.floor(baseDelayMs * Math.random());
         this.reconnectAttempts.set(url, attempt + 1);
         await delay(delayMs);
 

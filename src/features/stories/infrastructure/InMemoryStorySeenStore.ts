@@ -1,6 +1,6 @@
 import type {IStorySeenStore} from '../application/ports/IStorySeenStore';
 
-/** V1 in-memory seen store — used in tests; production uses KeychainStorySeenStore. */
+/** V1 in-memory seen store - used in tests; production uses KeychainStorySeenStore. */
 export class InMemoryStorySeenStore implements IStorySeenStore {
   private readonly seen = new Set<string>();
 

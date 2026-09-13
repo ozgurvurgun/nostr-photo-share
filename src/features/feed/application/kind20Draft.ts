@@ -10,7 +10,7 @@ export type Kind20DraftInput = {
 };
 
 /**
- * Builds an unsigned NIP-68 kind:20 event (single imeta — V1).
+ * Builds an unsigned NIP-68 kind:20 event (single imeta - V1).
  * Application-layer only; no relay/network imports.
  */
 export function buildKind20UnsignedEvent(input: Kind20DraftInput): SignableEvent {

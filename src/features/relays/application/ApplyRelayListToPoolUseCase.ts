@@ -17,7 +17,7 @@ class EmptyRelayPoolError extends AppErrorClass {
 
 /**
  * Syncs the relay pool to preference URLs (read and/or write).
- * Never syncs to an empty set — falls back to configured defaults when provided.
+ * Never syncs to an empty set - falls back to configured defaults when provided.
  */
 export class ApplyRelayListToPoolUseCase {
   constructor(

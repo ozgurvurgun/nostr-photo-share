@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, screen} from '@testing-library/react-native';
+import {fireEvent, render, screen} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {AppProviders} from '../../../../app/providers/AppProviders';
@@ -24,5 +24,28 @@ describe('WelcomeScreen', () => {
     expect(screen.getByText('Yeni kimlik oluştur')).toBeTruthy();
     expect(screen.getByText('Gizli anahtar ile giriş')).toBeTruthy();
     expect(screen.getByText('Uzak imzalayıcı bağla')).toBeTruthy();
+  });
+
+  it('navigates to CreateIdentity when primary action is pressed', () => {
+    const onCreateIdentity = jest.fn();
+
+    function CreateIdentityStub(): React.JSX.Element {
+      onCreateIdentity();
+      return null as unknown as React.JSX.Element;
+    }
+
+    render(
+      <AppProviders scheme="dark">
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{headerShown: false}}>
+            <Stack.Screen name="Welcome" component={WelcomeScreen} />
+            <Stack.Screen name="CreateIdentity" component={CreateIdentityStub} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AppProviders>,
+    );
+
+    fireEvent.press(screen.getByText('Yeni kimlik oluştur'));
+    expect(onCreateIdentity).toHaveBeenCalled();
   });
 });

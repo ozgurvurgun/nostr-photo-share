@@ -21,7 +21,7 @@ export type ScreenHeaderProps = {
 };
 
 /**
- * Shared top bar for stack screens — matches CreatePost / CreateStory chrome.
+ * Shared top bar for stack screens - matches CreatePost / CreateStory chrome.
  */
 export function ScreenHeader({
   title,

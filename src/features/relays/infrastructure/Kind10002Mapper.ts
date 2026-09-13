@@ -1,4 +1,4 @@
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import type {SignedNostrEvent} from '../../../infrastructure/nostr/protocol/event';
 import {InvalidRelayListError} from '../domain/errors';
 import {RELAY_LIST_KIND} from '../domain/kinds';
@@ -33,7 +33,7 @@ export const Kind10002Mapper = {
       } else if (marker === 'write') {
         read = false;
       } else if (marker !== undefined && marker.length > 0) {
-        // Unknown marker — treat as both (lenient).
+        // Unknown marker - treat as both (lenient).
         read = true;
         write = true;
       }

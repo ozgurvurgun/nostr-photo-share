@@ -1,5 +1,5 @@
 import {SignerUnavailableError} from '../../../core/errors/errors';
-import {err, ok, type Result} from '../../../core/result/Result';
+import {err, type Result} from '../../../core/result/Result';
 import {
   ImageAttachment,
   validateSelectedImage,
@@ -7,6 +7,7 @@ import {
 } from '../domain/ImageAttachment';
 import {
   DEFAULT_IMAGE_CONSTRAINTS,
+  detectImageMimeFromBytes,
   resolveImageMimeType,
   type ImageConstraints,
 } from '../domain/ImageConstraints';
@@ -36,7 +37,7 @@ export type UploadImageError =
   | SignerUnavailableError;
 
 /**
- * Pick (optional) → validate → read bytes → hash → upload → ImageAttachment.
+ * Pick (optional) -> validate -> read bytes -> hash -> upload -> ImageAttachment.
  * Does not publish Nostr posts (Phase 4).
  */
 export class UploadImageUseCase {
@@ -82,11 +83,27 @@ export class UploadImageUseCase {
       );
     }
 
+    const detectedMime = detectImageMimeFromBytes(bytes);
+    if (detectedMime === null) {
+      return err(
+        new InvalidImageError(
+          'Image content is not a supported JPEG, PNG, or WebP file',
+        ),
+      );
+    }
+    if (detectedMime !== validated.value.mimeType) {
+      return err(
+        new InvalidImageError(
+          `Image content MIME (${detectedMime}) does not match declared type (${validated.value.mimeType})`,
+        ),
+      );
+    }
+
     const hashHex = this.blobHasher.sha256Hex(bytes);
 
     const uploadResult = await this.mediaUploader.upload({
       bytes,
-      mimeType: validated.value.mimeType,
+      mimeType: detectedMime,
       sha256: hashHex,
       fileName: validated.value.fileName,
       onProgress: input.onProgress,
@@ -98,7 +115,11 @@ export class UploadImageUseCase {
     return ImageAttachment.create(
       {
         url: uploadResult.value.url,
-        mimeType: resolveImageMimeType(uploadResult.value.mimeType, validated.value.mimeType, this.constraints.allowedMimeTypes),
+        mimeType: resolveImageMimeType(
+          uploadResult.value.mimeType,
+          detectedMime,
+          this.constraints.allowedMimeTypes,
+        ),
         sizeBytes: uploadResult.value.sizeBytes || bytes.byteLength,
         width: validated.value.width,
         height: validated.value.height,

@@ -56,7 +56,7 @@ export class Nip96Uploader implements IMediaUploader {
           text: () => response.text(),
           json: () => response.json() as Promise<unknown>,
         })));
-    this.includePayloadTag = options.includePayloadTag ?? false;
+    this.includePayloadTag = options.includePayloadTag ?? true;
   }
 
   async upload(

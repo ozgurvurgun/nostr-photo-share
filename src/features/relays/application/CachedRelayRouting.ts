@@ -3,9 +3,9 @@ import type {IRelayRouting} from './ports/IRelayRouting';
 
 /**
  * Resolves write relays from the cached NIP-65 list for the current user.
- * - `null` — no routing configured (no cache) → publish to all wanted pool relays
- * - `[]` — list known but no write relays → publish must not fall through to all relays
- * - non-empty — publish only to these write URLs
+ * - `null` - no routing configured (no cache) -> publish to all wanted pool relays
+ * - `[]` - list known but no write relays -> publish must not fall through to all relays
+ * - non-empty - publish only to these write URLs
  */
 export class CachedRelayRouting implements IRelayRouting {
   constructor(
