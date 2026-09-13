@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo} from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,6 +19,7 @@ import type {ImagePost} from '../../../feed/domain/ImagePost';
 import {PostGrid} from '../../../feed/presentation/components/PostGrid';
 import {flattenFeedPosts, useFeed} from '../../../feed/presentation/hooks/useFeed';
 import {t} from '../../../../shared/i18n';
+import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
 import {Button} from '../../../../shared/ui/Button';
 import {EmptyState} from '../../../../shared/ui/EmptyState';
@@ -336,6 +337,12 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
   const toggleFollow = useToggleFollow(pubkeyHex);
   const isFollowing = followListQuery.data?.isFollowing(pubkeyHex) ?? false;
 
+  useEffect(() => {
+    if (toggleFollow.isError) {
+      StillHaptics.error();
+    }
+  }, [toggleFollow.isError]);
+
   const authorFeed = useFeed({
     authors: pubkeyHex.length > 0 ? [pubkeyHex] : undefined,
     enabled: pubkeyHex.length > 0,
@@ -462,6 +469,7 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
                 variant={isFollowing ? 'secondary' : 'primary'}
                 loading={toggleFollow.isPending}
                 onPress={() => {
+                  StillHaptics.follow();
                   toggleFollow.mutate(!isFollowing);
                 }}
               />
@@ -479,6 +487,7 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
             postCount={posts.length}
             onEdit={() => navigation.navigate('EditProfile')}
             onToggleFollow={() => {
+              StillHaptics.follow();
               toggleFollow.mutate(!isFollowing);
             }}
           />

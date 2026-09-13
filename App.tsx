@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, StatusBar, View} from 'react-native';
+import {ActivityIndicator, StatusBar, StyleSheet, View} from 'react-native';
 import {bootstrapAsync} from './src/app/bootstrap/bootstrap';
 import type {AppContainer} from './src/app/di/container';
 import {RootNavigator} from './src/app/navigation/RootNavigator';
@@ -10,12 +10,10 @@ function BootstrapLoading(): React.JSX.Element {
   const theme = useTheme();
   return (
     <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.background.primary,
-      }}>
+      style={[
+        styles.centered,
+        {backgroundColor: theme.colors.background.primary},
+      ]}>
       <ActivityIndicator color={theme.colors.accent.primary} />
     </View>
   );
@@ -26,7 +24,7 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    void bootstrapAsync().then(ready => {
+    bootstrapAsync().then(ready => {
       if (!cancelled) {
         setContainer(ready);
       }
@@ -52,5 +50,13 @@ function App(): React.JSX.Element {
     </AppProviders>
   );
 }
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default App;

@@ -1,26 +1,39 @@
 import {pickReadableOnColor, tuneAgainstBackground} from './color';
-import {ACCENT_BASE, layout, motion, radius, spacing, typography} from './tokens';
+import {
+  ACCENT_BASE,
+  elevation,
+  glass,
+  layout,
+  motion,
+  radius,
+  spacing,
+  storyRingGradient,
+  typography,
+} from './tokens';
 import type {Theme, ThemeColors} from './types';
 
 const AA = 4.5;
 
 function buildColors(
-  background: {primary: string; secondary: string; elevated: string},
-  text: {primary: string; secondary: string; disabled: string},
-  border: string,
+  background: ThemeColors['background'],
+  text: ThemeColors['text'],
+  border: ThemeColors['border'],
   accentToward: string,
   state: ThemeColors['state'],
+  overlay: ThemeColors['overlay'],
 ): ThemeColors {
   const accent = tuneAgainstBackground(ACCENT_BASE, background.primary, accentToward, AA);
   return {
     background,
     text,
-    border: {default: border},
+    border,
     accent: {
       primary: accent,
       onAccent: pickReadableOnColor(accent),
+      muted: tuneAgainstBackground(ACCENT_BASE, background.primary, accentToward, 3),
     },
     state,
+    overlay,
   };
 }
 
@@ -29,18 +42,28 @@ const darkColors = buildColors(
     primary: '#12110F',
     secondary: '#1B1A17',
     elevated: '#24221E',
+    surface: '#1F1D19',
   },
   {
     primary: '#F4F0E6',
     secondary: '#B8B1A4',
     disabled: '#7A746A',
+    inverse: '#1A1814',
   },
-  '#3A372F',
+  {
+    default: '#3A372F',
+    subtle: '#2A2823',
+    strong: '#524E44',
+  },
   '#FFF3C4',
   {
     error: '#E06A5C',
     success: '#7FAE7A',
     warning: '#D4A054',
+  },
+  {
+    scrim: glass.overlayDark,
+    glassStroke: glass.strokeDark,
   },
 );
 
@@ -49,18 +72,28 @@ const lightColors = buildColors(
     primary: '#F6F3EC',
     secondary: '#EBE6DB',
     elevated: '#FFFFFF',
+    surface: '#F0EBE1',
   },
   {
     primary: '#1A1814',
     secondary: '#5C574E',
     disabled: '#9A9488',
+    inverse: '#F4F0E6',
   },
-  '#D8D2C6',
+  {
+    default: '#D8D2C6',
+    subtle: '#E5DFD3',
+    strong: '#B8B0A2',
+  },
   '#3D2A08',
   {
     error: '#B42318',
     success: '#3B6D38',
     warning: '#8A5A12',
+  },
+  {
+    scrim: glass.overlayLight,
+    glassStroke: glass.strokeLight,
   },
 );
 
@@ -72,6 +105,9 @@ export const darkTheme: Theme = {
   radius,
   motion,
   layout,
+  elevation,
+  glass,
+  storyRingGradient,
 };
 
 export const lightTheme: Theme = {
@@ -82,6 +118,9 @@ export const lightTheme: Theme = {
   radius,
   motion,
   layout,
+  elevation,
+  glass,
+  storyRingGradient,
 };
 
 export function themeContrastPairs(theme: Theme): Array<[string, string]> {

@@ -17,6 +17,8 @@ export const tr = {
       'Çevrimdışı görünüyorsun. Varsa önbellekteki içerik gösteriliyor.',
     offlineStaleSuffix: '(güncel olmayabilir)',
     helpA11y: '{{topic}} hakkında bilgi',
+    stepOf: 'Adım {{current}} / {{total}}',
+    uploadingPercent: 'Yükleniyor... {{percent}}%',
   },
 
   tabs: {
@@ -86,10 +88,20 @@ export const tr = {
     imageUnavailable: 'Görsel yok',
     like: 'Beğen',
     liked: 'Beğenildi',
+    likeCountA11y: '{{count}} beğeni',
     comment: 'Yorum',
+    share: 'Paylaş',
+    shareFailed: 'Paylaşılamadı',
+    save: 'Kaydet',
+    saved: 'Kaydedildi',
     authorA11y: 'Yazar {{short}}',
     doubleTapLikeA11y: 'Beğenmek için iki kez dokun',
     gridCellA11y: 'Gönderi',
+    timeSec: '{{count}}sn',
+    timeMin: '{{count}}dk',
+    timeHour: '{{count}}sa',
+    timeDay: '{{count}}g',
+    timeWeek: '{{count}}h',
   },
 
   search: {
@@ -157,6 +169,9 @@ export const tr = {
     closeA11y: 'Hikaye görüntüleyiciyi kapat',
     prevA11y: 'Önceki hikaye',
     nextA11y: 'Sonraki hikaye',
+    prevAuthorA11y: 'Önceki kullanıcının hikayeleri',
+    nextAuthorA11y: 'Sonraki kullanıcının hikayeleri',
+    pauseA11y: 'Hikayeyi duraklat',
     imageFallback: 'Hikaye görseli',
   },
 
@@ -166,6 +181,7 @@ export const tr = {
     you: 'Sen',
     storiesA11y: '{{label}} hikayeleri{{unseen}}',
     unseenSuffix: ', görülmemiş',
+    seenSuffix: ', görüldü',
   },
 
   comments: {
@@ -246,6 +262,15 @@ export const tr = {
     body: 'JPEG, PNG veya WebP, en fazla 10 MiB.',
     previewA11y: 'Seçilen görsel önizlemesi',
     uploading: 'Yükleniyor... {{percent}}%',
+    openViewerA11y: 'Tam ekran görüntüle',
+    stepPick: 'Seç',
+    stepUpload: 'Yükle',
+    stepDone: 'Tamam',
+  },
+
+  mediaViewer: {
+    zoomA11y: 'Yakınlaştırmak için sıkıştır, hareket ettirmek için sürükle',
+    closeA11y: 'Görüntüleyiciyi kapat',
   },
 
   relays: {

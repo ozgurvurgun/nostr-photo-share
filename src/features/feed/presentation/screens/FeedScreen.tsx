@@ -4,7 +4,7 @@ import {
   FlatList,
   Platform,
   Pressable,
-  RefreshControl,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -14,10 +14,12 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {t} from '../../../../shared/i18n';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {EmptyState} from '../../../../shared/ui/EmptyState';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {Icon} from '../../../../shared/ui/Icon';
 import {OfflineBanner} from '../../../../shared/ui/OfflineBanner';
+import {StillRefreshControl} from '../../../../shared/ui/StillRefreshControl';
 import {useAuthSession} from '../../../auth/presentation/hooks/useAuthSession';
 import {useFollowList} from '../../../social/presentation/hooks/useFollow';
 import {useLikePost, usePostReactions} from '../../../social/presentation/hooks/useReactions';
@@ -45,6 +47,10 @@ export type FeedScreenProps = {
 export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.top),
+    [theme, insets.top],
+  );
   const focused = useIsFocused();
   const {identity} = useAuthSession();
   const online = useRelayOnline(2_000, {enabled: focused});
@@ -97,14 +103,14 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
   );
 
   const onRefresh = useCallback(() => {
-    void feed.refetch();
-    void followListQuery.refetch();
-    void stories.refetch();
+    feed.refetch().catch(() => undefined);
+    followListQuery.refetch().catch(() => undefined);
+    stories.refetch().catch(() => undefined);
   }, [feed, followListQuery, stories]);
 
   const onEndReached = useCallback(() => {
     if (feed.hasNextPage && !feed.isFetchingNextPage) {
-      void feed.fetchNextPage();
+      feed.fetchNextPage().catch(() => undefined);
     }
   }, [feed]);
 
@@ -137,7 +143,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
 
   const listHeader = useMemo(
     () => (
-      <View style={{gap: theme.spacing.md, paddingBottom: theme.spacing.sm}}>
+      <View style={styles.listHeader}>
         <StoryRingRow
           stacks={storyStacks}
           seenIds={seenIds}
@@ -145,7 +151,10 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
           loading={stories.isPending && storyStacks.length === 0}
           onCreateStory={() => navigation.navigate('CreateStory')}
           onOpenAuthor={authorPubkeyHex =>
-            navigation.navigate('StoryViewer', {authorPubkeyHex})
+            navigation.navigate('StoryViewer', {
+              authorPubkeyHex,
+              authorQueue: storyStacks.map(stack => stack.authorPubkeyHex),
+            })
           }
         />
         {stories.isError && storyStacks.length === 0 ? (
@@ -157,7 +166,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
                 : t('feed.storiesUnavailableFallback')
             }
             onRetry={() => {
-              void stories.refetch();
+              stories.refetch().catch(() => undefined);
             }}
           />
         ) : null}
@@ -170,15 +179,14 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
                 : t('feed.feedUpdateFailedFallback')
             }
             onRetry={() => {
-              void feed.refetch();
+              feed.refetch().catch(() => undefined);
             }}
           />
         ) : null}
       </View>
     ),
     [
-      theme.spacing.md,
-      theme.spacing.sm,
+      styles.listHeader,
       storyStacks,
       seenIds,
       selfPubkey,
@@ -214,45 +222,21 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
 
   if (!identity) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          backgroundColor: theme.colors.background.primary,
-          padding: theme.spacing.screenEdge,
-        }}>
+      <View style={styles.centered}>
         <ActivityIndicator color={theme.colors.accent.primary} />
       </View>
     );
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background.primary,
-        paddingTop: insets.top,
-      }}>
+    <View style={styles.root}>
       <OfflineBanner visible={!online || fromCache} stale={fromCache} />
 
-      <View
-        style={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.md,
-          paddingBottom: theme.spacing.sm,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+      <View style={styles.topBar}>
         <Text
           accessibilityRole="header"
           accessibilityLabel={t('brand')}
-          style={{
-            color: theme.colors.text.primary,
-            fontSize: theme.typography.display.fontSize,
-            lineHeight: theme.typography.display.lineHeight,
-            fontWeight: theme.typography.display.fontWeight,
-          }}>
+          style={styles.brand}>
           {t('brand')}
         </Text>
         <Pressable
@@ -260,26 +244,17 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
           accessibilityLabel={t('createPost.title')}
           onPress={() => navigation.navigate('CreatePost')}
           hitSlop={theme.layout.hitSlop}
-          style={({pressed}) => ({opacity: pressed ? 0.7 : 1})}>
+          style={({pressed}) => (pressed ? styles.pressed : null)}>
           <Icon name="plus" size={28} color={theme.colors.text.primary} />
         </Pressable>
       </View>
 
       {!hasFollows && !followListQuery.isPending ? (
-        <Text
-          style={{
-            paddingHorizontal: theme.spacing.screenEdge,
-            paddingBottom: theme.spacing.sm,
-            color: theme.colors.text.secondary,
-            fontSize: theme.typography.caption.fontSize,
-            lineHeight: theme.typography.caption.lineHeight,
-          }}>
-          {t('feed.globalHint')}
-        </Text>
+        <Text style={styles.globalHint}>{t('feed.globalHint')}</Text>
       ) : null}
 
       {isFatalError ? (
-        <View style={{padding: theme.spacing.screenEdge, gap: theme.spacing.md}}>
+        <View style={styles.fatal}>
           {listHeader}
           <ErrorState
             title={t('feed.loadFailed')}
@@ -287,7 +262,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
               feed.error instanceof Error ? feed.error.message : t('common.unknownError')
             }
             onRetry={() => {
-              void feed.refetch();
+              feed.refetch().catch(() => undefined);
             }}
           />
         </View>
@@ -295,21 +270,16 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
         <FlatList
           data={posts}
           keyExtractor={item => item.id}
-          contentContainerStyle={{
-            paddingBottom: theme.spacing.lg,
-            gap: theme.spacing.xl,
-            flexGrow: 1,
-          }}
+          contentContainerStyle={styles.listContent}
           windowSize={5}
           maxToRenderPerBatch={4}
           initialNumToRender={4}
           updateCellsBatchingPeriod={50}
           removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
-            <RefreshControl
+            <StillRefreshControl
               refreshing={feed.isRefetching && !feed.isFetchingNextPage}
               onRefresh={onRefresh}
-              tintColor={theme.colors.accent.primary}
             />
           }
           onEndReached={onEndReached}
@@ -331,7 +301,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
             feed.isFetchingNextPage ? (
               <ActivityIndicator
                 color={theme.colors.accent.primary}
-                style={{marginVertical: theme.spacing.md}}
+                style={styles.footerSpinner}
               />
             ) : undefined
           }
@@ -340,4 +310,60 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
       )}
     </View>
   );
+}
+
+function createStyles(theme: Theme, paddingTop: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+      paddingTop,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.screenEdge,
+    },
+    topBar: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    brand: {
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.display.fontSize,
+      lineHeight: theme.typography.display.lineHeight,
+      fontWeight: theme.typography.display.fontWeight,
+    },
+    globalHint: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingBottom: theme.spacing.sm,
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+    },
+    listHeader: {
+      gap: theme.spacing.md,
+      paddingBottom: theme.spacing.sm,
+    },
+    listContent: {
+      paddingBottom: theme.spacing.lg,
+      gap: theme.spacing.lg,
+      flexGrow: 1,
+    },
+    fatal: {
+      padding: theme.spacing.screenEdge,
+      gap: theme.spacing.md,
+    },
+    footerSpinner: {
+      marginVertical: theme.spacing.md,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
 }

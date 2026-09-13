@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   Modal,
   Pressable,
@@ -10,6 +10,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {t} from '../i18n';
 import {useTheme} from '../theme/ThemeProvider';
+import type {Theme} from '../theme/types';
 import {Icon} from './Icon';
 
 export type HelpModalProps = {
@@ -28,6 +29,10 @@ export function HelpModal({
 }: HelpModalProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.top, insets.bottom),
+    [theme, insets.top, insets.bottom],
+  );
 
   return (
     <Modal
@@ -40,43 +45,13 @@ export function HelpModal({
         accessibilityRole="button"
         accessibilityLabel={t('common.close')}
         onPress={onClose}
-        style={[
-          styles.backdrop,
-          {backgroundColor: 'rgba(18, 17, 15, 0.72)'},
-        ]}>
+        style={styles.backdrop}>
         <Pressable
           accessibilityRole="summary"
           onPress={event => event.stopPropagation()}
-          style={{
-            marginHorizontal: theme.spacing.screenEdge,
-            marginBottom: insets.bottom + theme.spacing.lg,
-            marginTop: insets.top + theme.spacing.lg,
-            maxHeight: '80%',
-            backgroundColor: theme.colors.background.elevated,
-            borderRadius: theme.radius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border.default,
-            overflow: 'hidden',
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: theme.spacing.md,
-              paddingVertical: theme.spacing.sm,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border.default,
-            }}>
-            <Text
-              accessibilityRole="header"
-              style={{
-                flex: 1,
-                color: theme.colors.text.primary,
-                fontSize: theme.typography.heading.fontSize,
-                fontWeight: theme.typography.heading.fontWeight,
-                paddingRight: theme.spacing.sm,
-              }}>
+          style={styles.sheet}>
+          <View style={styles.header}>
+            <Text accessibilityRole="header" style={styles.title}>
               {title}
             </Text>
             <Pressable
@@ -84,23 +59,13 @@ export function HelpModal({
               accessibilityLabel={t('common.close')}
               onPress={onClose}
               hitSlop={theme.layout.hitSlop}
-              style={({pressed}) => ({opacity: pressed ? 0.7 : 1})}>
+              style={({pressed}) => (pressed ? styles.pressed : null)}>
               <Icon name="close" size={22} color={theme.colors.text.primary} />
             </Pressable>
           </View>
-          <ScrollView
-            contentContainerStyle={{
-              padding: theme.spacing.md,
-              gap: theme.spacing.sm,
-            }}>
+          <ScrollView contentContainerStyle={styles.body}>
             {body.split('\n\n').map((paragraph, index) => (
-              <Text
-                key={`p-${index}`}
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.body.fontSize,
-                  lineHeight: theme.typography.body.lineHeight,
-                }}>
+              <Text key={`p-${index}`} style={styles.paragraph}>
                 {paragraph}
               </Text>
             ))}
@@ -111,9 +76,52 @@ export function HelpModal({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-});
+function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'center',
+      backgroundColor: theme.colors.overlay.scrim,
+    },
+    sheet: {
+      marginHorizontal: theme.spacing.screenEdge,
+      marginBottom: insetBottom + theme.spacing.lg,
+      marginTop: insetTop + theme.spacing.lg,
+      maxHeight: '80%',
+      backgroundColor: theme.colors.background.elevated,
+      borderRadius: theme.radius.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      overflow: 'hidden',
+      ...theme.elevation.sheet,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border.default,
+    },
+    title: {
+      flex: 1,
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.heading.fontSize,
+      fontWeight: theme.typography.heading.fontWeight,
+      paddingRight: theme.spacing.sm,
+    },
+    body: {
+      padding: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    paragraph: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
+}

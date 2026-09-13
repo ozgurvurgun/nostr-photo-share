@@ -1,14 +1,19 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Image, Pressable, ScrollView, Text, View} from 'react-native';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {t} from '../../../../shared/i18n';
+import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {Icon} from '../../../../shared/ui/Icon';
+import {MediaLightbox} from '../../../../shared/ui/MediaLightbox';
+import {StepProgress} from '../../../../shared/ui/StepProgress';
 import {TextField} from '../../../../shared/ui/TextField';
+import {UploadProgressBar} from '../../../../shared/ui/UploadProgressBar';
 import {useImageUpload} from '../../../media-upload/presentation/hooks/useImageUpload';
 import {MAX_STORY_CAPTION_LENGTH} from '../../domain/Story';
 import {usePublishStory} from '../hooks/useStories';
@@ -20,16 +25,22 @@ type Step = 'pick' | 'compose';
 export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.top, insets.bottom),
+    [theme, insets.top, insets.bottom],
+  );
   const upload = useImageUpload();
   const publish = usePublishStory();
   const [step, setStep] = useState<Step>('pick');
   const [caption, setCaption] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const autoAdvancedRef = useRef(false);
 
   const uploading = upload.state === 'picking' || upload.state === 'uploading';
   const hasImage = upload.state === 'success' && upload.attachment !== null;
   const canPublish = hasImage && !publish.isPending && !uploading;
+  const previewUri = upload.localPreviewUri ?? upload.attachment?.url ?? null;
 
   useEffect(() => {
     if (hasImage && step === 'pick' && !autoAdvancedRef.current) {
@@ -59,8 +70,10 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
         attachment: upload.attachment,
         caption: caption.trim(),
       });
+      StillHaptics.publishSuccess();
       navigation.navigate('MainTabs', {screen: 'Home'});
     } catch (error) {
+      StillHaptics.error();
       setFormError(
         error instanceof Error ? error.message : t('createStory.publishFailed'),
       );
@@ -76,25 +89,9 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
     navigation.goBack();
   }
 
-  const previewUri = upload.localPreviewUri ?? upload.attachment?.url;
-
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background.primary,
-        paddingTop: insets.top,
-      }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingVertical: theme.spacing.sm,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.border.default,
-        }}>
+    <View style={styles.root}>
+      <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
@@ -109,13 +106,7 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
             color={theme.colors.text.primary}
           />
         </Pressable>
-        <Text
-          accessibilityRole="header"
-          style={{
-            color: theme.colors.text.primary,
-            fontSize: theme.typography.heading.fontSize,
-            fontWeight: theme.typography.heading.fontWeight,
-          }}>
+        <Text accessibilityRole="header" style={styles.headerTitle}>
           {step === 'pick' ? t('createStory.stepPick') : t('createStory.stepShare')}
         </Text>
         {step === 'compose' ? (
@@ -124,78 +115,62 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
             accessibilityLabel={t('createStory.share')}
             disabled={!canPublish}
             onPress={() => {
-              void onPublish();
+              onPublish().catch(() => undefined);
             }}
             hitSlop={theme.layout.hitSlop}
             style={({pressed}) => ({
               opacity: !canPublish ? 0.4 : pressed ? 0.7 : 1,
             })}>
-            <Text
-              style={{
-                color: theme.colors.accent.primary,
-                fontSize: theme.typography.body.fontSize,
-                fontWeight: '700',
-              }}>
+            <Text style={styles.headerAction}>
               {publish.isPending ? t('common.loading') : t('createStory.share')}
             </Text>
           </Pressable>
         ) : (
-          <View style={{width: 24}} />
+          <View style={styles.headerSpacer} />
         )}
       </View>
 
       <ScrollView
-        style={{flex: 1}}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.lg,
-          paddingBottom: insets.bottom + theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}
+        style={styles.flex}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled">
+        <StepProgress
+          labels={[t('mediaUpload.stepPick'), t('createStory.stepShare')]}
+          currentIndex={step === 'pick' ? 0 : 1}
+        />
+
         {step === 'pick' ? (
           <>
-            <Text
-              style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.typography.body.fontSize,
-                lineHeight: theme.typography.body.lineHeight,
-              }}>
-              {t('createStory.body')}
-            </Text>
+            <Text style={styles.body}>{t('createStory.body')}</Text>
 
             {previewUri ? (
-              <Image
-                accessibilityLabel={t('createStory.previewA11y')}
-                source={{uri: previewUri}}
-                style={{
-                  width: '100%',
-                  aspectRatio: 9 / 16,
-                  maxHeight: 420,
-                  borderRadius: theme.radius.md,
-                  backgroundColor: theme.colors.background.elevated,
-                  alignSelf: 'center',
-                }}
-                resizeMode="cover"
-              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('mediaUpload.openViewerA11y')}
+                onPress={() => setViewerOpen(true)}>
+                <Image
+                  accessibilityLabel={t('createStory.previewA11y')}
+                  source={{uri: previewUri}}
+                  style={styles.previewLarge}
+                  resizeMode="cover"
+                />
+              </Pressable>
             ) : null}
 
-            {upload.state === 'uploading' ? (
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.caption.fontSize,
-                }}>
-                {t('createStory.uploading', {percent: Math.round(upload.progress * 100)})}
-              </Text>
-            ) : null}
+            <UploadProgressBar
+              progress={upload.progress}
+              visible={upload.state === 'uploading'}
+              label={t('createStory.uploading', {
+                percent: Math.round(upload.progress * 100),
+              })}
+            />
 
             {upload.errorMessage ? (
               <ErrorState
                 title={t('createStory.uploadFailed')}
                 message={upload.errorMessage}
                 onRetry={() => {
-                  void onPick();
+                  onPick().catch(() => undefined);
                 }}
               />
             ) : null}
@@ -208,7 +183,7 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
               }
               loading={uploading}
               onPress={() => {
-                void onPick();
+                onPick().catch(() => undefined);
               }}
             />
             {hasImage ? (
@@ -217,21 +192,21 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
           </>
         ) : (
           <>
-            <View style={{flexDirection: 'row', gap: theme.spacing.md}}>
+            <View style={styles.composeRow}>
               {previewUri ? (
-                <Image
-                  accessibilityLabel={t('createStory.previewA11y')}
-                  source={{uri: previewUri}}
-                  style={{
-                    width: 72,
-                    height: 128,
-                    borderRadius: theme.radius.sm,
-                    backgroundColor: theme.colors.background.elevated,
-                  }}
-                  resizeMode="cover"
-                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('mediaUpload.openViewerA11y')}
+                  onPress={() => setViewerOpen(true)}>
+                  <Image
+                    accessibilityLabel={t('createStory.previewA11y')}
+                    source={{uri: previewUri}}
+                    style={styles.previewThumb}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ) : null}
-              <View style={{flex: 1, gap: theme.spacing.sm}}>
+              <View style={styles.composeFields}>
                 <TextField
                   label={t('createStory.captionLabel')}
                   value={caption}
@@ -240,32 +215,20 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
                   editable={!publish.isPending}
                   placeholder={t('createStory.captionPlaceholder')}
                   multiline
-                  style={{
-                    minHeight: theme.layout.storyCaptionMinHeight,
-                    textAlignVertical: 'top',
-                  }}
+                  style={styles.captionField}
                 />
               </View>
             </View>
 
-            <Text
-              style={{
-                color: theme.colors.text.disabled,
-                fontSize: theme.typography.caption.fontSize,
-                lineHeight: theme.typography.caption.lineHeight,
-              }}>
-              {t('createStory.expiryHint')}
-            </Text>
+            <Text style={styles.hint}>{t('createStory.expiryHint')}</Text>
 
-            {upload.state === 'uploading' ? (
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.caption.fontSize,
-                }}>
-                {t('createStory.uploading', {percent: Math.round(upload.progress * 100)})}
-              </Text>
-            ) : null}
+            <UploadProgressBar
+              progress={upload.progress}
+              visible={upload.state === 'uploading'}
+              label={t('createStory.uploading', {
+                percent: Math.round(upload.progress * 100),
+              })}
+            />
 
             {formError ? (
               <ErrorState title={t('createStory.publishFailed')} message={formError} />
@@ -276,7 +239,7 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
               loading={publish.isPending}
               disabled={!canPublish}
               onPress={() => {
-                void onPublish();
+                onPublish().catch(() => undefined);
               }}
             />
             <Button
@@ -286,12 +249,92 @@ export function CreateStoryScreen({navigation}: CreateStoryScreenProps): React.J
               onPress={() => {
                 autoAdvancedRef.current = false;
                 setStep('pick');
-                void onPick();
+                onPick().catch(() => undefined);
               }}
             />
           </>
         )}
       </ScrollView>
+
+      <MediaLightbox
+        uri={previewUri}
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        accessibilityLabel={t('createStory.previewA11y')}
+      />
     </View>
   );
+}
+
+function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+      paddingTop: insetTop,
+    },
+    flex: {flex: 1},
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border.default,
+    },
+    headerTitle: {
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.heading.fontSize,
+      fontWeight: theme.typography.heading.fontWeight,
+    },
+    headerAction: {
+      color: theme.colors.accent.primary,
+      fontSize: theme.typography.body.fontSize,
+      fontWeight: '700',
+    },
+    headerSpacer: {width: 24},
+    content: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: insetBottom + theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    body: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+    },
+    previewLarge: {
+      width: '100%',
+      aspectRatio: 9 / 16,
+      maxHeight: 420,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.background.elevated,
+      alignSelf: 'center',
+    },
+    composeRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    previewThumb: {
+      width: 72,
+      height: 128,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.background.elevated,
+    },
+    composeFields: {
+      flex: 1,
+      gap: theme.spacing.sm,
+    },
+    captionField: {
+      minHeight: theme.layout.storyCaptionMinHeight,
+      textAlignVertical: 'top',
+    },
+    hint: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+    },
+  });
 }

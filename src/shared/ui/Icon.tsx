@@ -16,7 +16,10 @@ export type IconName =
   | 'image'
   | 'relay'
   | 'send'
-  | 'help';
+  | 'help'
+  | 'share'
+  | 'bookmark'
+  | 'bookmarkFill';
 
 export type IconProps = {
   readonly name: IconName;
@@ -226,6 +229,53 @@ export function Icon({
             strokeLinecap="round"
           />
           <Circle cx={12} cy={16.4} r={1} fill={stroke} />
+        </Svg>
+      );
+    case 'share':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M12 4.5v9.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Path
+            d="m8.5 8 3.5-3.5L15.5 8"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M6 12.5v4A1.5 1.5 0 0 0 7.5 18h9a1.5 1.5 0 0 0 1.5-1.5v-4"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'bookmark':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M7.5 4.5h9A1.5 1.5 0 0 1 18 6v13.5L12 16l-6 3.5V6A1.5 1.5 0 0 1 7.5 4.5Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'bookmarkFill':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M7.5 4.5h9A1.5 1.5 0 0 1 18 6v13.5L12 16l-6 3.5V6A1.5 1.5 0 0 1 7.5 4.5Z"
+            fill={stroke}
+            stroke={stroke}
+            strokeWidth={1.25}
+            strokeLinejoin="round"
+          />
         </Svg>
       );
     default:

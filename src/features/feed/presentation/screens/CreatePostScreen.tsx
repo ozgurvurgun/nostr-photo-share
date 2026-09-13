@@ -1,14 +1,19 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Image, Pressable, ScrollView, Text, View} from 'react-native';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {t} from '../../../../shared/i18n';
+import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {Icon} from '../../../../shared/ui/Icon';
+import {MediaLightbox} from '../../../../shared/ui/MediaLightbox';
+import {StepProgress} from '../../../../shared/ui/StepProgress';
 import {TextField} from '../../../../shared/ui/TextField';
+import {UploadProgressBar} from '../../../../shared/ui/UploadProgressBar';
 import {useImageUpload} from '../../../media-upload/presentation/hooks/useImageUpload';
 import {
   MAX_IMAGE_POST_CAPTION_LENGTH,
@@ -23,17 +28,23 @@ type Step = 'pick' | 'compose';
 export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.top, insets.bottom),
+    [theme, insets.top, insets.bottom],
+  );
   const upload = useImageUpload();
   const publish = usePublishImagePost();
   const [step, setStep] = useState<Step>('pick');
   const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const autoAdvancedRef = useRef(false);
 
   const uploading = upload.state === 'picking' || upload.state === 'uploading';
   const hasImage = upload.state === 'success' && upload.attachment !== null;
   const canPublish = hasImage && !publish.isPending && !uploading;
+  const previewUri = upload.localPreviewUri ?? upload.attachment?.url ?? null;
 
   useEffect(() => {
     if (hasImage && step === 'pick' && !autoAdvancedRef.current) {
@@ -76,8 +87,10 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
         caption: trimmedCaption,
         attachment: upload.attachment,
       });
+      StillHaptics.publishSuccess();
       navigation.navigate('MainTabs', {screen: 'Home'});
     } catch (error) {
+      StillHaptics.error();
       setFormError(
         error instanceof Error ? error.message : t('createPost.publishFailed'),
       );
@@ -94,22 +107,8 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background.primary,
-        paddingTop: insets.top,
-      }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingVertical: theme.spacing.sm,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.border.default,
-        }}>
+    <View style={styles.root}>
+      <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
@@ -124,13 +123,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
             color={theme.colors.text.primary}
           />
         </Pressable>
-        <Text
-          accessibilityRole="header"
-          style={{
-            color: theme.colors.text.primary,
-            fontSize: theme.typography.heading.fontSize,
-            fontWeight: theme.typography.heading.fontWeight,
-          }}>
+        <Text accessibilityRole="header" style={styles.headerTitle}>
           {step === 'pick' ? t('createPost.stepPick') : t('createPost.stepShare')}
         </Text>
         {step === 'compose' ? (
@@ -139,76 +132,62 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
             accessibilityLabel={t('createPost.publish')}
             disabled={!canPublish}
             onPress={() => {
-              void onPublish();
+              onPublish().catch(() => undefined);
             }}
             hitSlop={theme.layout.hitSlop}
             style={({pressed}) => ({
               opacity: !canPublish ? 0.4 : pressed ? 0.7 : 1,
             })}>
-            <Text
-              style={{
-                color: theme.colors.accent.primary,
-                fontSize: theme.typography.body.fontSize,
-                fontWeight: '700',
-              }}>
+            <Text style={styles.headerAction}>
               {publish.isPending ? t('common.loading') : t('createPost.publish')}
             </Text>
           </Pressable>
         ) : (
-          <View style={{width: 24}} />
+          <View style={styles.headerSpacer} />
         )}
       </View>
 
       <ScrollView
-        style={{flex: 1}}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.lg,
-          paddingBottom: insets.bottom + theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}
+        style={styles.flex}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled">
+        <StepProgress
+          labels={[t('mediaUpload.stepPick'), t('createPost.stepShare')]}
+          currentIndex={step === 'pick' ? 0 : 1}
+        />
+
         {step === 'pick' ? (
           <>
-            <Text
-              style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.typography.body.fontSize,
-                lineHeight: theme.typography.body.lineHeight,
-              }}>
-              {t('createPost.body')}
-            </Text>
+            <Text style={styles.body}>{t('createPost.body')}</Text>
 
-            {(upload.localPreviewUri || upload.attachment) && (
-              <Image
-                accessibilityLabel={t('createPost.previewA11y')}
-                source={{uri: upload.localPreviewUri ?? upload.attachment?.url}}
-                style={{
-                  width: '100%',
-                  aspectRatio: 1,
-                  borderRadius: theme.radius.md,
-                  backgroundColor: theme.colors.background.elevated,
-                }}
-                resizeMode="cover"
-              />
-            )}
-
-            {upload.state === 'uploading' ? (
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.caption.fontSize,
-                }}>
-                {t('createPost.uploading', {percent: Math.round(upload.progress * 100)})}
-              </Text>
+            {previewUri ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('mediaUpload.openViewerA11y')}
+                onPress={() => setViewerOpen(true)}>
+                <Image
+                  accessibilityLabel={t('createPost.previewA11y')}
+                  source={{uri: previewUri}}
+                  style={styles.previewLarge}
+                  resizeMode="cover"
+                />
+              </Pressable>
             ) : null}
+
+            <UploadProgressBar
+              progress={upload.progress}
+              visible={upload.state === 'uploading'}
+              label={t('createPost.uploading', {
+                percent: Math.round(upload.progress * 100),
+              })}
+            />
 
             {upload.errorMessage ? (
               <ErrorState
                 title={t('createPost.uploadFailed')}
                 message={upload.errorMessage}
                 onRetry={() => {
-                  void onPick();
+                  onPick().catch(() => undefined);
                 }}
               />
             ) : null}
@@ -219,7 +198,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
               }
               loading={uploading}
               onPress={() => {
-                void onPick();
+                onPick().catch(() => undefined);
               }}
             />
             {hasImage ? (
@@ -228,19 +207,21 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
           </>
         ) : (
           <>
-            <View style={{flexDirection: 'row', gap: theme.spacing.md}}>
-              <Image
-                accessibilityLabel={t('createPost.previewA11y')}
-                source={{uri: upload.localPreviewUri ?? upload.attachment?.url}}
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: theme.radius.sm,
-                  backgroundColor: theme.colors.background.elevated,
-                }}
-                resizeMode="cover"
-              />
-              <View style={{flex: 1, gap: theme.spacing.sm}}>
+            <View style={styles.composeRow}>
+              {previewUri ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('mediaUpload.openViewerA11y')}
+                  onPress={() => setViewerOpen(true)}>
+                  <Image
+                    accessibilityLabel={t('createPost.previewA11y')}
+                    source={{uri: previewUri}}
+                    style={styles.previewThumb}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              ) : null}
+              <View style={styles.composeFields}>
                 <TextField
                   label={t('createPost.captionLabel')}
                   value={caption}
@@ -249,10 +230,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
                   editable={!publish.isPending}
                   placeholder={t('createPost.captionPlaceholder')}
                   multiline
-                  style={{
-                    minHeight: theme.layout.captionMinHeight,
-                    textAlignVertical: 'top',
-                  }}
+                  style={styles.captionField}
                 />
               </View>
             </View>
@@ -266,15 +244,13 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
               placeholder={t('createPost.titleOptionalPlaceholder')}
             />
 
-            {upload.state === 'uploading' ? (
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.caption.fontSize,
-                }}>
-                {t('createPost.uploading', {percent: Math.round(upload.progress * 100)})}
-              </Text>
-            ) : null}
+            <UploadProgressBar
+              progress={upload.progress}
+              visible={upload.state === 'uploading'}
+              label={t('createPost.uploading', {
+                percent: Math.round(upload.progress * 100),
+              })}
+            />
 
             {formError ? (
               <ErrorState title={t('createPost.publishFailed')} message={formError} />
@@ -285,7 +261,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
               loading={publish.isPending}
               disabled={!canPublish}
               onPress={() => {
-                void onPublish();
+                onPublish().catch(() => undefined);
               }}
             />
             <Button
@@ -295,12 +271,85 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
               onPress={() => {
                 autoAdvancedRef.current = false;
                 setStep('pick');
-                void onPick();
+                onPick().catch(() => undefined);
               }}
             />
           </>
         )}
       </ScrollView>
+
+      <MediaLightbox
+        uri={previewUri}
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        accessibilityLabel={t('createPost.previewA11y')}
+      />
     </View>
   );
+}
+
+function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+      paddingTop: insetTop,
+    },
+    flex: {flex: 1},
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border.default,
+    },
+    headerTitle: {
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.heading.fontSize,
+      fontWeight: theme.typography.heading.fontWeight,
+    },
+    headerAction: {
+      color: theme.colors.accent.primary,
+      fontSize: theme.typography.body.fontSize,
+      fontWeight: '700',
+    },
+    headerSpacer: {width: 24},
+    content: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: insetBottom + theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    body: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+    },
+    previewLarge: {
+      width: '100%',
+      aspectRatio: 1,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.background.elevated,
+    },
+    composeRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    previewThumb: {
+      width: 96,
+      height: 96,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.background.elevated,
+    },
+    composeFields: {
+      flex: 1,
+      gap: theme.spacing.sm,
+    },
+    captionField: {
+      minHeight: theme.layout.captionMinHeight,
+      textAlignVertical: 'top',
+    },
+  });
 }

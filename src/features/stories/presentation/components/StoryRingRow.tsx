@@ -1,13 +1,19 @@
 import React, {useMemo} from 'react';
 import {
-  Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
-import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import Svg, {Circle, Defs, LinearGradient, Stop} from 'react-native-svg';
 import {t} from '../../../../shared/i18n';
+import {triggerHaptic} from '../../../../shared/haptics/haptics';
+import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
+import {CachedImage} from '../../../../shared/ui/CachedImage';
+import {Icon} from '../../../../shared/ui/Icon';
+import type {ImageStyle as FastImageStyle} from '@d11/react-native-fast-image';
 import {useProfile} from '../../../profile/presentation/hooks/useProfile';
 import type {AuthorStoryStack} from '../../application/GetActiveStoriesUseCase';
 import {authorStackHasUnseen} from '../hooks/useStories';
@@ -31,9 +37,10 @@ export function StoryRingRow({
   onCreateStory,
 }: StoryRingRowProps): React.JSX.Element {
   const theme = useTheme();
+  const styles = useMemo(() => createRowStyles(theme), [theme]);
   const avatarSize = theme.layout.storyAvatar;
   const ringWidth = theme.layout.storyRingWidth;
-  const columnWidth = avatarSize + theme.layout.storyRingGap;
+  const columnWidth = avatarSize + theme.layout.storyRingGap + ringWidth * 2;
 
   const ordered = useMemo(() => {
     const self = stacks.find(s => s.authorPubkeyHex === selfPubkeyHex);
@@ -49,11 +56,7 @@ export function StoryRingRow({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{
-        gap: theme.spacing.sm,
-        paddingVertical: theme.spacing.xs,
-        alignItems: 'flex-start',
-      }}>
+      contentContainerStyle={styles.row}>
       <CreateStoryChip
         onPress={onCreateStory}
         avatarSize={avatarSize}
@@ -88,40 +91,29 @@ function CreateStoryChip({
   readonly columnWidth: number;
 }): React.JSX.Element {
   const theme = useTheme();
+  const styles = useMemo(
+    () => createChipStyles(theme, avatarSize, ringWidth, columnWidth),
+    [theme, avatarSize, ringWidth, columnWidth],
+  );
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t('storyRing.createA11y')}
-      onPress={onPress}
-      style={{alignItems: 'center', gap: theme.spacing.xxs, width: columnWidth}}>
-      <View
-        style={{
-          width: avatarSize + ringWidth * 2,
-          height: avatarSize + ringWidth * 2,
-          borderRadius: theme.radius.full,
-          borderWidth: ringWidth,
-          borderStyle: 'dashed',
-          borderColor: theme.colors.border.default,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.background.elevated,
-        }}>
-        <Text
-          style={{
-            color: theme.colors.accent.primary,
-            fontSize: theme.typography.heading.fontSize,
-            fontWeight: theme.typography.heading.fontWeight,
-          }}>
-          +
-        </Text>
+      onPress={() => {
+        triggerHaptic('selection');
+        onPress();
+      }}
+      style={({pressed}) => [styles.column, pressed ? styles.pressed : null]}>
+      <View style={styles.createOuter}>
+        <View style={styles.createInner}>
+          <Icon name="plus" size={28} color={theme.colors.accent.primary} />
+        </View>
+        <View style={styles.createBadge}>
+          <Icon name="plus" size={12} color={theme.colors.accent.onAccent} />
+        </View>
       </View>
-      <Text
-        numberOfLines={1}
-        style={{
-          color: theme.colors.text.secondary,
-          fontSize: theme.typography.caption.fontSize,
-          lineHeight: theme.typography.caption.lineHeight,
-        }}>
+      <Text numberOfLines={1} style={styles.label}>
         {t('storyRing.yourStory')}
       </Text>
     </Pressable>
@@ -147,79 +139,97 @@ function StoryRingAvatar({
 }): React.JSX.Element {
   const theme = useTheme();
   const profile = useProfile(stack.authorPubkeyHex);
+  const styles = useMemo(
+    () => createAvatarStyles(theme, avatarSize, ringWidth, columnWidth, unseen),
+    [theme, avatarSize, ringWidth, columnWidth, unseen],
+  );
   const label =
     profile.data?.displayName?.trim() ||
     profile.data?.name?.trim() ||
     (isSelf ? t('storyRing.you') : shortPubkey(stack.authorPubkeyHex));
   const picture = profile.data?.picture?.trim() ?? '';
-
-  // Unseen: subtle two-stop accent ring (not Instagram rainbow). Seen: neutral.
-  const outerRing = unseen ? theme.colors.accent.primary : theme.colors.border.default;
-  const innerRing = unseen ? theme.colors.state.warning : theme.colors.background.primary;
+  const ringSize = avatarSize + ringWidth * 2 + 4;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t('storyRing.storiesA11y', {
         label,
-        unseen: unseen ? t('storyRing.unseenSuffix') : '',
+        unseen: unseen ? t('storyRing.unseenSuffix') : t('storyRing.seenSuffix'),
       })}
-      onPress={onPress}
-      style={{alignItems: 'center', gap: theme.spacing.xxs, width: columnWidth}}>
-      <View
-        style={{
-          width: avatarSize + ringWidth * 2,
-          height: avatarSize + ringWidth * 2,
-          borderRadius: theme.radius.full,
-          padding: 1,
-          backgroundColor: outerRing,
-        }}>
-        <View
-          style={{
-            flex: 1,
-            borderRadius: theme.radius.full,
-            padding: Math.max(1, ringWidth - 1),
-            backgroundColor: innerRing,
-          }}>
-          <View
-            style={{
-              flex: 1,
-              borderRadius: theme.radius.full,
-              overflow: 'hidden',
-              backgroundColor: theme.colors.background.elevated,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            {picture.length > 0 ? (
-              <Image
-                source={{uri: picture}}
-                style={{width: '100%', height: '100%'}}
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.label.fontSize,
-                  fontWeight: theme.typography.label.fontWeight,
-                }}>
+      onPress={() => {
+        triggerHaptic('selection');
+        onPress();
+      }}
+      style={({pressed}) => [styles.column, pressed ? styles.pressed : null]}>
+      <View style={styles.ringWrap}>
+        <StoryGradientRing
+          size={ringSize}
+          strokeWidth={ringWidth}
+          unseen={unseen}
+        />
+        <View style={styles.avatarFrame}>
+          {picture.length > 0 ? (
+            <CachedImage
+              uri={picture}
+              style={styles.avatarImage}
+              accessibilityLabel={label}
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarInitial}>
                 {label.slice(0, 1).toUpperCase()}
               </Text>
-            )}
-          </View>
+            </View>
+          )}
         </View>
       </View>
-      <Text
-        numberOfLines={1}
-        style={{
-          color: theme.colors.text.secondary,
-          fontSize: theme.typography.caption.fontSize,
-          lineHeight: theme.typography.caption.lineHeight,
-          maxWidth: columnWidth,
-        }}>
+      <Text numberOfLines={1} style={styles.label}>
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+function StoryGradientRing({
+  size,
+  strokeWidth,
+  unseen,
+}: {
+  readonly size: number;
+  readonly strokeWidth: number;
+  readonly unseen: boolean;
+}): React.JSX.Element {
+  const theme = useTheme();
+  const radius = (size - strokeWidth) / 2;
+  const gradientId = unseen ? 'stillStoryUnseen' : 'stillStorySeen';
+
+  return (
+    <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+      <Defs>
+        {unseen ? (
+          <LinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={theme.storyRingGradient.start} />
+            <Stop offset="55%" stopColor={theme.storyRingGradient.mid} />
+            <Stop offset="100%" stopColor={theme.storyRingGradient.end} />
+          </LinearGradient>
+        ) : (
+          <LinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={theme.colors.border.strong} />
+            <Stop offset="100%" stopColor={theme.colors.border.default} />
+          </LinearGradient>
+        )}
+      </Defs>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={`url(#${gradientId})`}
+        strokeWidth={strokeWidth}
+        fill="none"
+        opacity={unseen ? 1 : 0.55}
+      />
+    </Svg>
   );
 }
 
@@ -230,3 +240,131 @@ function shortPubkey(pubkeyHex: string): string {
   return `${pubkeyHex.slice(0, 4)}...${pubkeyHex.slice(-4)}`;
 }
 
+function createRowStyles(theme: Theme) {
+  return StyleSheet.create({
+    row: {
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      alignItems: 'flex-start',
+    },
+  });
+}
+
+function createChipStyles(
+  theme: Theme,
+  avatarSize: number,
+  ringWidth: number,
+  columnWidth: number,
+) {
+  const outer = avatarSize + ringWidth * 2 + 4;
+  return StyleSheet.create({
+    column: {
+      alignItems: 'center',
+      gap: theme.spacing.xxs,
+      width: columnWidth,
+    },
+    pressed: {
+      opacity: 0.75,
+      transform: [{scale: 0.96}],
+    },
+    createOuter: {
+      width: outer,
+      height: outer,
+      borderRadius: theme.radius.full,
+      borderWidth: ringWidth,
+      borderStyle: 'dashed',
+      borderColor: theme.colors.accent.muted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.background.surface,
+    },
+    createInner: {
+      width: avatarSize,
+      height: avatarSize,
+      borderRadius: theme.radius.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.background.elevated,
+    },
+    createBadge: {
+      position: 'absolute',
+      right: 2,
+      bottom: 2,
+      width: 22,
+      height: 22,
+      borderRadius: theme.radius.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.accent.primary,
+      borderWidth: 2,
+      borderColor: theme.colors.background.primary,
+    },
+    label: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+      maxWidth: columnWidth,
+      textAlign: 'center',
+    },
+  });
+}
+
+function createAvatarStyles(
+  theme: Theme,
+  avatarSize: number,
+  ringWidth: number,
+  columnWidth: number,
+  unseen: boolean,
+) {
+  const ringSize = avatarSize + ringWidth * 2 + 4;
+  return StyleSheet.create({
+    column: {
+      alignItems: 'center',
+      gap: theme.spacing.xxs,
+      width: columnWidth,
+    },
+    pressed: {
+      opacity: 0.75,
+      transform: [{scale: 0.96}],
+    },
+    ringWrap: {
+      width: ringSize,
+      height: ringSize,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarFrame: {
+      width: avatarSize,
+      height: avatarSize,
+      borderRadius: theme.radius.full,
+      overflow: 'hidden',
+      backgroundColor: theme.colors.background.elevated,
+      borderWidth: 2,
+      borderColor: theme.colors.background.primary,
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    } as FastImageStyle,
+    avatarFallback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.username.fontSize,
+      fontWeight: theme.typography.username.fontWeight,
+    },
+    label: {
+      color: unseen ? theme.colors.text.primary : theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+      fontWeight: unseen
+        ? theme.typography.username.fontWeight
+        : theme.typography.caption.fontWeight,
+      maxWidth: columnWidth,
+      textAlign: 'center',
+    },
+  });
+}

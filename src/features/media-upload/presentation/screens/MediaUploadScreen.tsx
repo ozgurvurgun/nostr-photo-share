@@ -1,13 +1,17 @@
-import React from 'react';
-import {Image, ScrollView, Text, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {Image, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {t} from '../../../../shared/i18n';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
+import {MediaLightbox} from '../../../../shared/ui/MediaLightbox';
 import {ScreenHeader} from '../../../../shared/ui/ScreenHeader';
+import {StepProgress} from '../../../../shared/ui/StepProgress';
+import {UploadProgressBar} from '../../../../shared/ui/UploadProgressBar';
 import {useImageUpload} from '../hooks/useImageUpload';
 
 export type MediaUploadScreenProps = NativeStackScreenProps<AppStackParamList, 'MediaUpload'>;
@@ -15,9 +19,11 @@ export type MediaUploadScreenProps = NativeStackScreenProps<AppStackParamList, '
 export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(theme, insets.bottom), [theme, insets.bottom]);
   const upload = useImageUpload();
   const purpose = route.params?.purpose ?? 'general';
   const inProgress = upload.state === 'picking' || upload.state === 'uploading';
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const title =
     purpose === 'avatar' ? t('mediaUpload.titleAvatar') : t('mediaUpload.titleImage');
@@ -29,6 +35,10 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
       : upload.state === 'success'
         ? t('mediaUpload.uploadAnother')
         : t('mediaUpload.choosePhoto');
+
+  const previewUri = upload.localPreviewUri ?? upload.attachment?.url ?? null;
+  const stepIndex =
+    upload.state === 'success' ? 2 : upload.state === 'uploading' || upload.state === 'picking' ? 1 : 0;
 
   async function onPrimary(): Promise<void> {
     if (upload.state === 'success' && purpose === 'avatar' && upload.attachment) {
@@ -48,89 +58,54 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
   }
 
   return (
-    <View style={{flex: 1, backgroundColor: theme.colors.background.primary}}>
+    <View style={styles.root}>
       <ScreenHeader
         title={title}
         onBack={() => navigation.goBack()}
         backIcon="close"
       />
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.lg,
-          paddingBottom: insets.bottom + theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}>
-        <Text
-          style={{
-            color: theme.colors.text.secondary,
-            fontSize: theme.typography.body.fontSize,
-            lineHeight: theme.typography.body.lineHeight,
-          }}>
-          {t('mediaUpload.body')}
-        </Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <StepProgress
+          labels={[
+            t('mediaUpload.stepPick'),
+            t('mediaUpload.stepUpload'),
+            t('mediaUpload.stepDone'),
+          ]}
+          currentIndex={stepIndex}
+        />
 
-        {(upload.localPreviewUri || upload.attachment) && (
-          <Image
-            accessibilityLabel={t('mediaUpload.previewA11y')}
-            source={{uri: upload.localPreviewUri ?? upload.attachment?.url}}
-            style={{
-              width: purpose === 'avatar' ? 160 : '100%',
-              height: purpose === 'avatar' ? 160 : theme.layout.mediaPreviewHeight,
-              borderRadius: purpose === 'avatar' ? theme.radius.full : theme.radius.md,
-              backgroundColor: theme.colors.background.elevated,
-              alignSelf: 'center',
-            }}
-            resizeMode="cover"
-          />
-        )}
+        <Text style={styles.body}>{t('mediaUpload.body')}</Text>
 
-        {upload.state === 'uploading' ? (
-          <View style={{gap: theme.spacing.xs}}>
-            <Text
-              style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.typography.caption.fontSize,
-                lineHeight: theme.typography.caption.lineHeight,
-              }}>
-              {t('mediaUpload.uploading', {percent: Math.round(upload.progress * 100)})}
-            </Text>
-            <View
-              style={{
-                height: theme.spacing.xs,
-                borderRadius: theme.radius.full,
-                backgroundColor: theme.colors.background.elevated,
-                overflow: 'hidden',
-              }}>
-              <View
-                style={{
-                  height: '100%',
-                  width: `${Math.round(upload.progress * 100)}%`,
-                  backgroundColor: theme.colors.accent.primary,
-                }}
-              />
-            </View>
-          </View>
+        {previewUri ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('mediaUpload.openViewerA11y')}
+            onPress={() => setViewerOpen(true)}
+            style={({pressed}) => [pressed ? styles.previewPressed : null]}>
+            <Image
+              accessibilityLabel={t('mediaUpload.previewA11y')}
+              source={{uri: previewUri}}
+              style={[
+                styles.preview,
+                purpose === 'avatar' ? styles.previewAvatar : styles.previewWide,
+              ]}
+              resizeMode="cover"
+            />
+          </Pressable>
         ) : null}
 
+        <UploadProgressBar
+          progress={upload.progress}
+          visible={upload.state === 'uploading'}
+          label={t('mediaUpload.uploading', {
+            percent: Math.round(upload.progress * 100),
+          })}
+        />
+
         {upload.state === 'success' && upload.attachment ? (
-          <View style={{gap: theme.spacing.xs}}>
-            <Text
-              style={{
-                color: theme.colors.state.success,
-                fontSize: theme.typography.body.fontSize,
-                lineHeight: theme.typography.body.lineHeight,
-                fontWeight: '600',
-              }}>
-              {t('mediaUpload.uploadComplete')}
-            </Text>
-            <Text
-              selectable
-              style={{
-                color: theme.colors.text.disabled,
-                fontSize: theme.typography.caption.fontSize,
-                lineHeight: theme.typography.caption.lineHeight,
-              }}>
+          <View style={styles.successBlock}>
+            <Text style={styles.successTitle}>{t('mediaUpload.uploadComplete')}</Text>
+            <Text selectable style={styles.url}>
               {upload.attachment.url}
             </Text>
           </View>
@@ -141,7 +116,7 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
             title={t('mediaUpload.uploadFailed')}
             message={upload.errorMessage}
             onRetry={() => {
-              void upload.pickAndUpload();
+              upload.pickAndUpload().catch(() => undefined);
             }}
           />
         ) : null}
@@ -151,10 +126,68 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
           loading={inProgress}
           disabled={inProgress}
           onPress={() => {
-            void onPrimary();
+            onPrimary().catch(() => undefined);
           }}
         />
       </ScrollView>
+
+      <MediaLightbox
+        uri={previewUri}
+        visible={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        accessibilityLabel={t('mediaUpload.previewA11y')}
+      />
     </View>
   );
+}
+
+function createStyles(theme: Theme, insetBottom: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+    },
+    content: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: insetBottom + theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    body: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+    },
+    preview: {
+      backgroundColor: theme.colors.background.elevated,
+      alignSelf: 'center',
+    },
+    previewAvatar: {
+      width: 160,
+      height: 160,
+      borderRadius: theme.radius.full,
+    },
+    previewWide: {
+      width: '100%',
+      height: theme.layout.mediaPreviewHeight,
+      borderRadius: theme.radius.md,
+    },
+    previewPressed: {
+      opacity: 0.85,
+    },
+    successBlock: {
+      gap: theme.spacing.xs,
+    },
+    successTitle: {
+      color: theme.colors.state.success,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+      fontWeight: '600',
+    },
+    url: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+    },
+  });
 }

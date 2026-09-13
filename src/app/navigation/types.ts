@@ -18,7 +18,12 @@ export type AppStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   CreatePost: undefined;
   CreateStory: undefined;
-  StoryViewer: {authorPubkeyHex: string; storyId?: string};
+  StoryViewer: {
+    authorPubkeyHex: string;
+    storyId?: string;
+    /** Ordered author pubkeys for horizontal swipe between story stacks. */
+    authorQueue?: string[];
+  };
   Account: undefined;
   Profile: {pubkeyHex?: string} | undefined;
   EditProfile: {pictureUrl?: string} | undefined;
