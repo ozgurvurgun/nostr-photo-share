@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+EXPECTED_NAME="Özgür Vurgun"
+EXPECTED_EMAIL="ozgurvurgun1@gmail.com"
+
+NAME="${GIT_AUTHOR_NAME:-$(git config --get user.name || true)}"
+EMAIL="${GIT_AUTHOR_EMAIL:-$(git config --get user.email || true)}"
+
+if [[ "$NAME" != "$EXPECTED_NAME" || "$EMAIL" != "$EXPECTED_EMAIL" ]]; then
+  echo "commit blocked: author must be ${EXPECTED_NAME} <${EXPECTED_EMAIL}>" >&2
+  echo "resolved author: ${NAME:-?} <${EMAIL:-?}>" >&2
+  echo "hint: repos under open-edge use includeIf + .githooks; unset GIT_AUTHOR_* overrides" >&2
+  exit 1
+fi

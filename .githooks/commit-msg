@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="$1"
+
+# Strip Cursor co-author trailers if anything injects them into the message.
+sed -i -E '/^Co-authored-by:.*[Cc]ursor/Id' "$MSG_FILE"
+sed -i -E '/^Co-authored-by:.*cursoragent@cursor\.com/Id' "$MSG_FILE"
+# Drop trailing blank lines left after trailer removal
+sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$MSG_FILE"
+
+if grep -qiE 'Co-authored-by:.*cursor|cursoragent@cursor\.com' "$MSG_FILE"; then
+  echo "commit blocked: Cursor must not appear as co-author/contributor" >&2
+  exit 1
+fi
