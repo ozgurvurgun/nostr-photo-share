@@ -1,11 +1,14 @@
-import React, {useCallback, useEffect, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
+  Alert,
   Pressable,
+  Share,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
+import type {ImageStyle as FastImageStyle} from '@d11/react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAppContainer} from '../../../../app/providers/AppContainerContext';
@@ -18,92 +21,25 @@ import {
 import type {ImagePost} from '../../../feed/domain/ImagePost';
 import {PostGrid} from '../../../feed/presentation/components/PostGrid';
 import {flattenFeedPosts, useFeed} from '../../../feed/presentation/hooks/useFeed';
+import {postDetailParamsFromPost} from '../../../feed/presentation/navigation/postDetailParams';
+import {formatCompactCount, shortNpub} from '../../../../shared/format';
 import {t} from '../../../../shared/i18n';
 import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
-import {Button} from '../../../../shared/ui/Button';
-import {EmptyState} from '../../../../shared/ui/EmptyState';
+import type {Theme} from '../../../../shared/theme/types';
+import {CachedImage} from '../../../../shared/ui/CachedImage';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
-import {HelpModal} from '../../../../shared/ui/HelpModal';
 import {Icon} from '../../../../shared/ui/Icon';
-import {Nip05Identifier} from '../../domain/Nip05Identifier';
-import {isProfileContentEmpty, type Nip05Status, type Profile} from '../../domain/Profile';
+import {Skeleton} from '../../../../shared/ui/Skeleton';
+import {emptyProfile, type Profile} from '../../domain/Profile';
 import {useProfile} from '../hooks/useProfile';
 
-/** Stack Profile and tab ProfileTab both render this screen. */
 export type ProfileScreenProps = {
   navigation: NativeStackNavigationProp<AppStackParamList>;
   route: {params?: {pubkeyHex?: string} | undefined};
 };
 
-function nip05BadgeLabel(status: Nip05Status): string {
-  switch (status) {
-    case 'verified':
-      return t('profile.nip05Verified');
-    case 'failed':
-      return t('profile.nip05Failed');
-    case 'unverified':
-      return t('profile.nip05Unverified');
-    default:
-      return '';
-  }
-}
-
-function nip05BadgeColor(
-  status: Nip05Status,
-  theme: ReturnType<typeof useTheme>,
-): string {
-  switch (status) {
-    case 'verified':
-      return theme.colors.state.success;
-    case 'failed':
-      return theme.colors.state.error;
-    case 'unverified':
-      return theme.colors.state.warning;
-    default:
-      return theme.colors.text.disabled;
-  }
-}
-
-function ProfileSkeleton(): React.JSX.Element {
-  const theme = useTheme();
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        gap: theme.spacing.md,
-        paddingHorizontal: theme.spacing.screenEdge,
-      }}
-      accessibilityLabel={t('profile.loadingA11y')}>
-      <View
-        style={{
-          width: 86,
-          height: 86,
-          borderRadius: theme.radius.full,
-          backgroundColor: theme.colors.background.elevated,
-        }}
-      />
-      <View style={{flex: 1, gap: theme.spacing.sm, justifyContent: 'center'}}>
-        <View
-          style={{
-            height: 18,
-            width: '50%',
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.background.elevated,
-          }}
-        />
-        <View
-          style={{
-            height: 14,
-            width: '70%',
-            borderRadius: theme.radius.sm,
-            backgroundColor: theme.colors.background.secondary,
-          }}
-        />
-      </View>
-    </View>
-  );
-}
+type GridTab = 'posts' | 'extra';
 
 function Avatar({
   picture,
@@ -115,43 +51,41 @@ function Avatar({
   readonly size: number;
 }): React.JSX.Element {
   const theme = useTheme();
+  const styles = useMemo(() => createAvatarStyles(theme, size), [theme, size]);
 
   if (picture.length > 0) {
     return (
-      <Image
-        accessibilityLabel={t('profile.avatarA11y', {label})}
-        source={{uri: picture}}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: theme.radius.full,
-          backgroundColor: theme.colors.background.elevated,
-        }}
-      />
+      <View style={styles.ring}>
+        <CachedImage
+          uri={picture}
+          accessibilityLabel={t('profile.avatarA11y', {label})}
+          style={styles.avatarImage}
+          containerStyle={styles.avatarContainer}
+        />
+      </View>
     );
   }
 
   return (
     <View
       accessibilityLabel={t('profile.avatarPlaceholderA11y')}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.background.elevated,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: theme.colors.border.default,
-      }}>
-      <Text
-        style={{
-          color: theme.colors.text.secondary,
-          fontSize: theme.typography.heading.fontSize,
-          fontWeight: theme.typography.heading.fontWeight,
-        }}>
+      style={[styles.ring, styles.avatarFallback]}>
+      <Text style={styles.avatarInitial}>
         {(label.slice(0, 1) || '?').toUpperCase()}
       </Text>
+    </View>
+  );
+}
+
+function ProfileSkeleton(): React.JSX.Element {
+  const theme = useTheme();
+  const styles = useMemo(() => createSkeletonStyles(theme), [theme]);
+  return (
+    <View style={styles.block} accessibilityLabel={t('profile.loadingA11y')}>
+      <Skeleton width={96} height={96} radius={theme.radius.full} />
+      <Skeleton width="55%" height={22} />
+      <Skeleton width="40%" height={14} />
+      <Skeleton width="80%" height={14} />
     </View>
   );
 }
@@ -163,8 +97,11 @@ function ProfileHeader({
   isFollowing,
   followPending,
   postCount,
+  followingCount,
   onEdit,
   onToggleFollow,
+  onShare,
+  onMessage,
 }: {
   readonly profile: Profile;
   readonly npub: string;
@@ -172,153 +109,103 @@ function ProfileHeader({
   readonly isFollowing: boolean;
   readonly followPending: boolean;
   readonly postCount: number;
+  readonly followingCount: number;
   readonly onEdit: () => void;
   readonly onToggleFollow: () => void;
+  readonly onShare: () => void;
+  readonly onMessage: () => void;
 }): React.JSX.Element {
   const theme = useTheme();
-  const [showVerifiedHelp, setShowVerifiedHelp] = React.useState(false);
+  const styles = useMemo(() => createHeaderStyles(theme), [theme]);
   const title =
     profile.displayName.length > 0
       ? profile.displayName
       : profile.name.length > 0
         ? profile.name
         : t('profile.unnamed');
-
-  const nip05Label = useMemo(() => {
-    if (profile.nip05 === null) {
-      return null;
-    }
-    const parsed = Nip05Identifier.parse(profile.nip05);
-    return parsed.ok ? parsed.value.displayLabel() : profile.nip05;
-  }, [profile.nip05]);
+  const handle = profile.name.length > 0 ? `@${profile.name}` : shortNpub(npub);
 
   return (
-    <View
-      style={{
-        paddingHorizontal: theme.spacing.screenEdge,
-        gap: theme.spacing.md,
-        paddingBottom: theme.spacing.md,
-      }}>
-      <View style={{flexDirection: 'row', gap: theme.spacing.lg, alignItems: 'center'}}>
-        <Avatar picture={profile.picture} label={title} size={86} />
-        <View style={{flex: 1, gap: theme.spacing.xs}}>
-          <Text
-            accessibilityRole="header"
-            numberOfLines={1}
-            style={{
-              color: theme.colors.text.primary,
-              fontSize: theme.typography.heading.fontSize,
-              lineHeight: theme.typography.heading.lineHeight,
-              fontWeight: theme.typography.heading.fontWeight,
-            }}>
-            {title}
-          </Text>
-          <View style={{flexDirection: 'row', gap: theme.spacing.lg}}>
-            <View style={{alignItems: 'center'}}>
-              <Text
-                style={{
-                  color: theme.colors.text.primary,
-                  fontSize: theme.typography.body.fontSize,
-                  fontWeight: '700',
-                }}>
-                {postCount}
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.caption.fontSize,
-                }}>
-                {t('profile.postsStat')}
-              </Text>
-            </View>
-          </View>
-          {profile.name.length > 0 ? (
-            <Text
-              style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.typography.caption.fontSize,
-              }}>
-              @{profile.name}
+    <View style={styles.header}>
+      <View style={styles.identityRow}>
+        <Avatar picture={profile.picture} label={title} size={92} />
+        <View style={styles.identity}>
+          <View style={styles.nameRow}>
+            <Text accessibilityRole="header" numberOfLines={1} style={styles.displayName}>
+              {title}
             </Text>
+            <Icon name="check" size={18} color={theme.colors.accent.primary} />
+          </View>
+          <Text numberOfLines={1} style={styles.handle}>
+            {isOwn ? handle : `${handle} · ${shortNpub(npub)}`}
+          </Text>
+          {profile.about.length > 0 ? (
+            <Text style={styles.about}>{profile.about}</Text>
           ) : null}
         </View>
       </View>
 
-      {profile.about.length > 0 ? (
-        <Text
-          style={{
-            color: theme.colors.text.primary,
-            fontSize: theme.typography.body.fontSize,
-            lineHeight: theme.typography.body.lineHeight,
-          }}>
-          {profile.about}
-        </Text>
-      ) : null}
-
-      {nip05Label && profile.nip05Status !== 'none' ? (
-        <View style={{gap: theme.spacing.xxs}}>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs}}>
-            <Text
-              style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.typography.caption.fontSize,
-                fontWeight: '600',
-                letterSpacing: 0.4,
-                textTransform: 'uppercase',
-              }}>
-              {t('profile.verifiedUsername')}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.helpA11y', {
-                topic: t('profile.verifiedUsername'),
-              })}
-              onPress={() => setShowVerifiedHelp(true)}
-              hitSlop={theme.layout.hitSlop}
-              style={({pressed}) => ({opacity: pressed ? 0.7 : 1})}>
-              <Icon name="help" size={16} color={theme.colors.text.secondary} />
-            </Pressable>
-          </View>
-          <Text
-            style={{
-              color: nip05BadgeColor(profile.nip05Status, theme),
-              fontSize: theme.typography.body.fontSize,
-              fontWeight: '600',
-            }}>
-            {nip05Label}
-            {' · '}
-            {nip05BadgeLabel(profile.nip05Status)}
-          </Text>
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
+          <Text style={styles.statCount}>{formatCompactCount(postCount)}</Text>
+          <Text style={styles.statLabel}>{t('profile.postsStat')}</Text>
         </View>
-      ) : null}
+        <View style={styles.stat}>
+          <Text style={styles.statCount}>—</Text>
+          <Text style={styles.statLabel}>{t('profile.followersStat')}</Text>
+        </View>
+        <View style={styles.stat}>
+          <Text style={styles.statCount}>{formatCompactCount(followingCount)}</Text>
+          <Text style={styles.statLabel}>{t('profile.followingStat')}</Text>
+        </View>
+      </View>
 
-      <Text
-        selectable
-        numberOfLines={1}
-        style={{
-          color: theme.colors.text.disabled,
-          fontSize: theme.typography.caption.fontSize,
-        }}>
-        {npub}
-      </Text>
-
-      {isOwn ? (
-        <Button label={t('profile.edit')} variant="secondary" onPress={onEdit} />
-      ) : (
-        <Button
-          label={isFollowing ? t('profile.unfollow') : t('profile.follow')}
-          variant={isFollowing ? 'secondary' : 'primary'}
-          loading={followPending}
-          onPress={onToggleFollow}
-        />
-      )}
-
-      <HelpModal
-        visible={showVerifiedHelp}
-        title={t('editProfile.nip05HelpTitle')}
-        body={t('editProfile.nip05HelpBody')}
-        onClose={() => setShowVerifiedHelp(false)}
-      />
+      <View style={styles.actionRow}>
+        {isOwn ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.edit')}
+            onPress={onEdit}
+            style={({pressed}) => [
+              styles.mainAction,
+              pressed ? styles.pressed : null,
+            ]}>
+            <Text style={styles.mainActionLabel}>{t('profile.edit')}</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{busy: followPending, disabled: followPending}}
+            disabled={followPending}
+            onPress={onToggleFollow}
+            style={({pressed}) => [
+              styles.mainAction,
+              pressed || followPending ? styles.pressed : null,
+            ]}>
+            {followPending ? (
+              <ActivityIndicator color={theme.colors.text.primary} size="small" />
+            ) : (
+              <Text style={styles.mainActionLabel}>
+                {isFollowing ? t('profile.following') : t('profile.follow')}
+              </Text>
+            )}
+          </Pressable>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isOwn ? t('profile.shareProfile') : t('profile.messageA11y')}
+          onPress={isOwn ? onShare : onMessage}
+          style={({pressed}) => [
+            styles.iconAction,
+            pressed ? styles.pressed : null,
+          ]}>
+          <Icon
+            name={isOwn ? 'share' : 'send'}
+            size={18}
+            color={theme.colors.text.primary}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -326,16 +213,23 @@ function ProfileHeader({
 export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createScreenStyles(theme, insets.top),
+    [theme, insets.top],
+  );
   const container = useAppContainer();
   const {identity} = useAuthSession();
   const routePubkey = route.params?.pubkeyHex;
   const pubkeyHex = (routePubkey ?? identity?.publicKey.toHex() ?? '').trim().toLowerCase();
   const isOwn = Boolean(identity && identity.publicKey.toHex() === pubkeyHex);
+  const [gridTab, setGridTab] = useState<GridTab>('posts');
 
   const query = useProfile(pubkeyHex.length > 0 ? pubkeyHex : undefined);
-  const followListQuery = useFollowList();
+  const followListQuery = useFollowList(pubkeyHex);
+  const selfFollowList = useFollowList();
   const toggleFollow = useToggleFollow(pubkeyHex);
-  const isFollowing = followListQuery.data?.isFollowing(pubkeyHex) ?? false;
+  const isFollowing = selfFollowList.data?.isFollowing(pubkeyHex) ?? false;
+  const followingCount = followListQuery.data?.followedPubkeys().length ?? 0;
 
   useEffect(() => {
     if (toggleFollow.isError) {
@@ -347,10 +241,13 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
     authors: pubkeyHex.length > 0 ? [pubkeyHex] : undefined,
     enabled: pubkeyHex.length > 0,
   });
-  const posts = useMemo(
-    () => flattenFeedPosts(authorFeed.data?.pages),
-    [authorFeed.data?.pages],
-  );
+  const posts = useMemo(() => {
+    const all = flattenFeedPosts(authorFeed.data?.pages);
+    if (pubkeyHex.length === 0) {
+      return all;
+    }
+    return all.filter(post => post.authorPubkeyHex === pubkeyHex);
+  }, [authorFeed.data?.pages, pubkeyHex]);
 
   const npub = useMemo(() => {
     if (pubkeyHex.length === 0) {
@@ -362,81 +259,45 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
 
   const cachedFallback =
     pubkeyHex.length > 0 ? container.getProfile.getCached(pubkeyHex) : null;
-  const profile = query.data ?? cachedFallback;
+  const profile =
+    query.data ?? cachedFallback ?? (pubkeyHex.length > 0 ? emptyProfile(pubkeyHex) : null);
   const showBack = navigation.canGoBack();
+  const handleLabel =
+    profile?.name && profile.name.length > 0
+      ? `@${profile.name}`
+      : t('profile.title');
 
   const onPressPost = useCallback(
     (post: ImagePost) => {
-      navigation.navigate('PostDetail', {
-        eventId: post.id,
-        authorPubkeyHex: post.authorPubkeyHex,
-      });
+      navigation.navigate(
+        'PostDetail',
+        postDetailParamsFromPost(post, {authorFeed: true}),
+      );
     },
     [navigation],
   );
 
   const onEndReached = useCallback(() => {
     if (authorFeed.hasNextPage && !authorFeed.isFetchingNextPage) {
-      void authorFeed.fetchNextPage();
+      authorFeed.fetchNextPage().catch(() => undefined);
     }
   }, [authorFeed]);
 
+  const onShareProfile = useCallback(async (): Promise<void> => {
+    try {
+      await Share.share({message: npub});
+    } catch {
+      Alert.alert(t('profile.shareFailed'));
+    }
+  }, [npub]);
+
   const listHeader = useMemo(() => {
     return (
-      <View style={{gap: theme.spacing.md, paddingBottom: theme.spacing.sm}}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: theme.spacing.screenEdge,
-            paddingTop: theme.spacing.sm,
-          }}>
-          {showBack ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}
-              onPress={() => navigation.goBack()}
-              hitSlop={12}
-              style={{flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xxs}}>
-              <Icon name="chevronLeft" size={22} color={theme.colors.accent.primary} />
-              <Text
-                style={{
-                  color: theme.colors.accent.primary,
-                  fontSize: theme.typography.body.fontSize,
-                  fontWeight: '600',
-                }}>
-                {t('common.back')}
-              </Text>
-            </Pressable>
-          ) : (
-            <Text
-              accessibilityRole="header"
-              style={{
-                color: theme.colors.text.primary,
-                fontSize: theme.typography.title.fontSize,
-                fontWeight: theme.typography.title.fontWeight,
-              }}>
-              {t('profile.title')}
-            </Text>
-          )}
-          {isOwn ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('account.title')}
-              onPress={() => navigation.navigate('Account')}
-              hitSlop={12}>
-              <Icon name="settings" size={24} color={theme.colors.text.primary} />
-            </Pressable>
-          ) : (
-            <View style={{width: 24}} />
-          )}
-        </View>
+      <View style={styles.listHeader}>
+        {query.isLoading && !cachedFallback ? <ProfileSkeleton /> : null}
 
-        {query.isLoading && !profile ? <ProfileSkeleton /> : null}
-
-        {query.isError && !profile ? (
-          <View style={{paddingHorizontal: theme.spacing.screenEdge}}>
+        {query.isError && !cachedFallback && !query.data ? (
+          <View style={styles.padded}>
             <ErrorState
               title={t('profile.loadFailed')}
               message={
@@ -445,39 +306,13 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
                   : t('common.unknownError')
               }
               onRetry={() => {
-                void query.refetch();
+                query.refetch().catch(() => undefined);
               }}
             />
           </View>
         ) : null}
 
-        {profile && isProfileContentEmpty(profile) ? (
-          <View
-            style={{
-              paddingHorizontal: theme.spacing.screenEdge,
-              gap: theme.spacing.md,
-            }}>
-            <EmptyState
-              title={t('profile.emptyTitle')}
-              message={isOwn ? t('profile.emptySelf') : t('profile.emptyOther')}
-              actionLabel={isOwn ? t('profile.create') : undefined}
-              onAction={isOwn ? () => navigation.navigate('EditProfile') : undefined}
-            />
-            {!isOwn ? (
-              <Button
-                label={isFollowing ? t('profile.unfollow') : t('profile.follow')}
-                variant={isFollowing ? 'secondary' : 'primary'}
-                loading={toggleFollow.isPending}
-                onPress={() => {
-                  StillHaptics.follow();
-                  toggleFollow.mutate(!isFollowing);
-                }}
-              />
-            ) : null}
-          </View>
-        ) : null}
-
-        {profile && !isProfileContentEmpty(profile) ? (
+        {profile ? (
           <ProfileHeader
             profile={profile}
             npub={npub}
@@ -485,79 +320,152 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
             isFollowing={isFollowing}
             followPending={toggleFollow.isPending}
             postCount={posts.length}
+            followingCount={followingCount}
             onEdit={() => navigation.navigate('EditProfile')}
             onToggleFollow={() => {
               StillHaptics.follow();
               toggleFollow.mutate(!isFollowing);
             }}
+            onShare={() => {
+              onShareProfile().catch(() => undefined);
+            }}
+            onMessage={() => navigation.navigate('Messages')}
           />
         ) : null}
 
         {toggleFollow.isError ? (
-          <Text
-            style={{
-              paddingHorizontal: theme.spacing.screenEdge,
-              color: theme.colors.state.error,
-              fontSize: theme.typography.caption.fontSize,
-            }}>
-            {t('profile.followFailed')}
-          </Text>
+          <Text style={styles.followError}>{t('profile.followFailed')}</Text>
         ) : null}
 
-        {query.isFetching && profile ? (
-          <ActivityIndicator color={theme.colors.accent.primary} />
-        ) : null}
-
-        <Text
-          style={{
-            paddingHorizontal: theme.spacing.screenEdge,
-            color: theme.colors.text.secondary,
-            fontSize: theme.typography.caption.fontSize,
-            fontWeight: '600',
-            letterSpacing: 0.6,
-            textTransform: 'uppercase',
-          }}>
-          {t('profile.gridTitle')}
-        </Text>
+        <View style={styles.gridTabs}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{selected: gridTab === 'posts'}}
+            onPress={() => setGridTab('posts')}
+            style={styles.gridTab}>
+            <Icon
+              name="grid"
+              size={22}
+              color={
+                gridTab === 'posts'
+                  ? theme.colors.accent.primary
+                  : theme.colors.text.disabled
+              }
+            />
+            {gridTab === 'posts' ? <View style={styles.gridTabLine} /> : null}
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{selected: gridTab === 'extra'}}
+            onPress={() => setGridTab('extra')}
+            style={styles.gridTab}>
+            <Icon
+              name={isOwn ? 'bookmark' : 'image'}
+              size={22}
+              color={
+                gridTab === 'extra'
+                  ? theme.colors.accent.primary
+                  : theme.colors.text.disabled
+              }
+            />
+            {gridTab === 'extra' ? <View style={styles.gridTabLine} /> : null}
+          </Pressable>
+        </View>
       </View>
     );
   }, [
-    theme,
-    showBack,
-    navigation,
-    isOwn,
-    query,
-    profile,
+    cachedFallback,
+    followingCount,
+    gridTab,
     isFollowing,
-    toggleFollow,
+    isOwn,
+    navigation,
     npub,
     posts.length,
+    profile,
+    query,
+    styles,
+    theme.colors.accent.primary,
+    theme.colors.text.disabled,
+    toggleFollow,
+    onShareProfile,
   ]);
 
+  const extraEmpty = isOwn
+    ? {
+        title: t('profile.savedEmptyTitle'),
+        message: t('profile.savedEmptyMessage'),
+      }
+    : {
+        title: t('profile.taggedEmptyTitle'),
+        message: t('profile.taggedEmptyMessage'),
+      };
+
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background.primary,
-        paddingTop: insets.top,
-      }}>
+    <View style={styles.root}>
+      <View style={styles.navRow}>
+        {showBack ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+            onPress={() => navigation.goBack()}
+            hitSlop={theme.layout.hitSlop}
+            style={({pressed}) => [styles.navSide, pressed ? styles.pressed : null]}>
+            <Icon name="chevronLeft" size={24} color={theme.colors.text.primary} />
+          </Pressable>
+        ) : (
+          <View style={styles.navSide} />
+        )}
+        <Text numberOfLines={1} style={styles.navTitle}>
+          {handleLabel}
+        </Text>
+        {isOwn ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.moreA11y')}
+            onPress={() => navigation.navigate('Account')}
+            hitSlop={theme.layout.hitSlop}
+            style={({pressed}) => [styles.navSide, pressed ? styles.pressed : null]}>
+            <Icon name="ellipsis" size={22} color={theme.colors.text.primary} />
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.shareProfile')}
+            onPress={() => {
+              onShareProfile().catch(() => undefined);
+            }}
+            hitSlop={theme.layout.hitSlop}
+            style={({pressed}) => [styles.navSide, pressed ? styles.pressed : null]}>
+            <Icon name="share" size={20} color={theme.colors.accent.primary} />
+          </Pressable>
+        )}
+      </View>
       <PostGrid
-        posts={posts}
-        loading={authorFeed.isPending && posts.length === 0}
+        posts={gridTab === 'posts' ? posts : []}
+        loading={gridTab === 'posts' && authorFeed.isPending && posts.length === 0}
         refreshing={authorFeed.isRefetching && !authorFeed.isFetchingNextPage}
         onRefresh={() => {
-          void authorFeed.refetch();
-          void query.refetch();
+          authorFeed.refetch().catch(() => undefined);
+          query.refetch().catch(() => undefined);
         }}
-        onEndReached={onEndReached}
-        fetchingMore={authorFeed.isFetchingNextPage}
-        error={authorFeed.isError ? (authorFeed.error as Error) : null}
+        onEndReached={gridTab === 'posts' ? onEndReached : undefined}
+        fetchingMore={gridTab === 'posts' && authorFeed.isFetchingNextPage}
+        error={
+          gridTab === 'posts' && authorFeed.isError ? (authorFeed.error as Error) : null
+        }
         onRetry={() => {
-          void authorFeed.refetch();
+          authorFeed.refetch().catch(() => undefined);
         }}
-        emptyTitle={t('profile.gridEmptyTitle')}
+        emptyTitle={
+          gridTab === 'posts' ? t('profile.gridEmptyTitle') : extraEmpty.title
+        }
         emptyMessage={
-          isOwn ? t('profile.gridEmptySelf') : t('profile.gridEmptyOther')
+          gridTab === 'posts'
+            ? isOwn
+              ? t('profile.gridEmptySelf')
+              : t('profile.gridEmptyOther')
+            : extraEmpty.message
         }
         onPressPost={onPressPost}
         ListHeaderComponent={listHeader}
@@ -565,4 +473,198 @@ export function ProfileScreen({navigation, route}: ProfileScreenProps): React.JS
       />
     </View>
   );
+}
+
+function createSkeletonStyles(theme: Theme) {
+  return StyleSheet.create({
+    block: {
+      alignItems: 'flex-start',
+      gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingBottom: theme.spacing.md,
+    },
+  });
+}
+
+function createAvatarStyles(theme: Theme, size: number) {
+  return StyleSheet.create({
+    ring: {
+      width: size,
+      height: size,
+      borderRadius: theme.radius.full,
+      borderWidth: 2,
+      borderColor: theme.colors.accent.primary,
+      padding: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarContainer: {
+      width: size - 10,
+      height: size - 10,
+      borderRadius: theme.radius.full,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    } as FastImageStyle,
+    avatarFallback: {
+      backgroundColor: theme.colors.background.elevated,
+    },
+    avatarInitial: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.heading.fontSize,
+      fontWeight: theme.typography.heading.fontWeight,
+    },
+  });
+}
+
+function createHeaderStyles(theme: Theme) {
+  return StyleSheet.create({
+    header: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      gap: theme.spacing.lg,
+      paddingBottom: theme.spacing.md,
+    },
+    identityRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+      alignItems: 'center',
+    },
+    identity: {
+      flex: 1,
+      gap: 4,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    displayName: {
+      flexShrink: 1,
+      color: theme.colors.text.primary,
+      fontSize: 22,
+      lineHeight: 28,
+      fontWeight: '700',
+    },
+    handle: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+    },
+    about: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: 18,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+    },
+    stat: {
+      alignItems: 'center',
+      minWidth: 72,
+    },
+    statCount: {
+      color: theme.colors.text.primary,
+      fontSize: 20,
+      fontWeight: '700',
+    },
+    statLabel: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.caption.fontSize,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+    },
+    mainAction: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: theme.radius.full,
+      borderWidth: 1,
+      borderColor: theme.colors.border.strong,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    mainActionLabel: {
+      color: theme.colors.text.primary,
+      fontWeight: '600',
+    },
+    iconAction: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border.strong,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
+}
+
+function createScreenStyles(theme: Theme, insetTop: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+      paddingTop: insetTop,
+    },
+    navRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.screenEdge,
+      minHeight: 48,
+    },
+    navSide: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    navTitle: {
+      flex: 1,
+      textAlign: 'center',
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.heading.fontSize,
+      fontWeight: '700',
+    },
+    listHeader: {
+      paddingTop: theme.spacing.sm,
+    },
+    padded: {
+      paddingHorizontal: theme.spacing.screenEdge,
+    },
+    followError: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      color: theme.colors.state.error,
+      fontSize: theme.typography.caption.fontSize,
+    },
+    gridTabs: {
+      flexDirection: 'row',
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border.default,
+      marginTop: theme.spacing.sm,
+    },
+    gridTab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+    },
+    gridTabLine: {
+      position: 'absolute',
+      left: 24,
+      right: 24,
+      bottom: 0,
+      height: 2,
+      backgroundColor: theme.colors.accent.primary,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
 }

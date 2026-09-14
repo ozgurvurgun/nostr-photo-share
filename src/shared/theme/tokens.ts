@@ -78,7 +78,7 @@ export const glass = {
 
 /** Non-color layout metrics shared across screens. */
 export const layout = {
-  storyAvatar: 56,
+  storyAvatar: 64,
   storyRingWidth: 3,
   storyRingGap: 8,
   storyDwellMs: 5_000,

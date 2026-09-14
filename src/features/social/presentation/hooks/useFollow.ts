@@ -5,18 +5,19 @@ import type {FollowList} from '../../domain/FollowList';
 import {feedInfiniteQueryKey} from '../../../feed/presentation/feedQueryKeys';
 import {followListQueryKey} from '../socialQueryKeys';
 
-export function useFollowList() {
+export function useFollowList(ownerPubkeyHex?: string) {
   const container = useAppContainer();
   const {identity} = useAuthSession();
-  const ownerPubkeyHex = identity?.publicKey.toHex().trim().toLowerCase() ?? '';
+  const owner =
+    (ownerPubkeyHex ?? identity?.publicKey.toHex() ?? '').trim().toLowerCase();
 
   return useQuery({
-    queryKey: followListQueryKey(ownerPubkeyHex),
-    enabled: ownerPubkeyHex.length > 0,
+    queryKey: followListQueryKey(owner),
+    enabled: owner.length > 0,
     queryFn: async (): Promise<FollowList> => {
-      const result = await container.getFollowList.execute(ownerPubkeyHex);
+      const result = await container.getFollowList.execute(owner);
       if (!result.ok) {
-        const cached = container.getFollowList.getCached(ownerPubkeyHex);
+        const cached = container.getFollowList.getCached(owner);
         if (cached !== null) {
           return cached;
         }

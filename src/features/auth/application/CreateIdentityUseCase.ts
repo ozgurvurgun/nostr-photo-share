@@ -18,8 +18,13 @@ export class CreateIdentityUseCase {
     private readonly createLocalSigner: () => ISigner,
   ) {}
 
-  async execute(): Promise<Result<NostrIdentity, CreateIdentityError>> {
-    const secretKey = this.keyGenerator.generateSecretKey();
+  async execute(
+    secretKeyOverride?: Uint8Array,
+  ): Promise<Result<NostrIdentity, CreateIdentityError>> {
+    const secretKey =
+      secretKeyOverride !== undefined
+        ? new Uint8Array(secretKeyOverride)
+        : this.keyGenerator.generateSecretKey();
     try {
       const pubkeyHex = this.keyGenerator.getPublicKeyHex(secretKey);
       const publicKeyResult = PublicKey.fromHex(pubkeyHex);

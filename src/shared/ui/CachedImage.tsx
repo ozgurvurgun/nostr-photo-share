@@ -12,11 +12,6 @@ import FastImage, {
   type OnLoadEvent,
 } from '@d11/react-native-fast-image';
 import {Blurhash} from 'react-native-blurhash';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import {useTheme} from '../theme/ThemeProvider';
 
 export type CachedImageProps = Omit<FastImageProps, 'source' | 'style'> & {
@@ -28,8 +23,8 @@ export type CachedImageProps = Omit<FastImageProps, 'source' | 'style'> & {
 };
 
 /**
- * Disk-cached remote image with optional blurhash placeholder and crossfade.
- * Presentation-only; domain still owns blurhash parsing (NIP-68 imeta).
+ * Disk-cached remote image with optional blurhash placeholder.
+ * Container fills its parent (width/height 100%) so feed media layouts size correctly.
  */
 export function CachedImage({
   uri,
@@ -42,29 +37,22 @@ export function CachedImage({
   ...rest
 }: CachedImageProps): React.JSX.Element {
   const theme = useTheme();
-  const opacity = useSharedValue(blurhash ? 0 : 1);
   const [showHash, setShowHash] = useState(Boolean(blurhash));
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
 
   const onImageLoad = useCallback(
     (event: OnLoadEvent) => {
-      opacity.value = withTiming(1, {duration: theme.motion.duration.short});
       setShowHash(false);
       onLoad?.(event);
     },
-    [onLoad, opacity, theme.motion.duration.short],
+    [onLoad],
   );
 
   const onImageError = useCallback(
     (event: OnErrorEvent) => {
-      opacity.value = 1;
       setShowHash(false);
       onError?.(event);
     },
-    [onError, opacity],
+    [onError],
   );
 
   const source = useMemo(
@@ -97,16 +85,14 @@ export function CachedImage({
         />
       ) : null}
       {uri.length > 0 ? (
-        <Animated.View style={[styles.fill, animatedStyle]}>
-          <FastImage
-            {...rest}
-            accessibilityLabel={accessibilityLabel}
-            source={source}
-            style={[styles.fillImage, style]}
-            onLoad={onImageLoad}
-            onError={onImageError}
-          />
-        </Animated.View>
+        <FastImage
+          {...rest}
+          accessibilityLabel={accessibilityLabel}
+          source={source}
+          style={[styles.fillImage, style]}
+          onLoad={onImageLoad}
+          onError={onImageError}
+        />
       ) : null}
     </View>
   );
@@ -115,16 +101,10 @@ export function CachedImage({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-  },
-  fill: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  fillImage: {
     width: '100%',
     height: '100%',
+  },
+  fillImage: {
+    ...StyleSheet.absoluteFill,
   } as FastImageStyle,
 });

@@ -14,10 +14,12 @@ import {CreatePostScreen} from '../../features/feed/presentation/screens/CreateP
 import {MediaUploadScreen} from '../../features/media-upload/presentation/screens/MediaUploadScreen';
 import {EditProfileScreen} from '../../features/profile/presentation/screens/EditProfileScreen';
 import {ProfileScreen} from '../../features/profile/presentation/screens/ProfileScreen';
+import {MessagesScreen} from '../../features/social/presentation/screens/MessagesScreen';
 import {PostDetailScreen} from '../../features/social/presentation/screens/PostDetailScreen';
 import {CreateStoryScreen} from '../../features/stories/presentation/screens/CreateStoryScreen';
 import {StoryViewerScreen} from '../../features/stories/presentation/screens/StoryViewerScreen';
 import {RelaysScreen} from '../../features/relays/presentation/screens/RelaysScreen';
+import {SearchLookupScreen} from '../../features/profile/presentation/screens/SearchLookupScreen';
 import {useAuthSession} from '../../features/auth/presentation/hooks/useAuthSession';
 import {useDeepLinkRouting} from '../../features/auth/presentation/hooks/useDeepLinkRouting';
 import {t} from '../../shared/i18n';
@@ -56,6 +58,8 @@ function AppNavigator(): React.JSX.Element {
       <AppStack.Screen name="EditProfile" component={EditProfileScreen} />
       <AppStack.Screen name="MediaUpload" component={MediaUploadScreen} />
       <AppStack.Screen name="PostDetail" component={PostDetailScreen} />
+      <AppStack.Screen name="Messages" component={MessagesScreen} />
+      <AppStack.Screen name="SearchLookup" component={SearchLookupScreen} />
       <AppStack.Screen name="Relays" component={RelaysScreen} />
     </AppStack.Navigator>
   );

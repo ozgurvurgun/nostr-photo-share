@@ -75,6 +75,7 @@ export function StoryViewerScreen({
   const storiesQuery = useActiveStories({
     enabled: true,
     authors: authorQueue,
+    refetchIntervalMs: false,
   });
   const markSeen = useMarkStorySeen();
   const seenIds = useStorySeenIds();

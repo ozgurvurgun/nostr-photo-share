@@ -9,8 +9,9 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Search: undefined;
+  Search: {query?: string} | undefined;
   Create: undefined;
+  Activity: undefined;
   ProfileTab: undefined;
 };
 
@@ -28,8 +29,24 @@ export type AppStackParamList = {
   Profile: {pubkeyHex?: string} | undefined;
   EditProfile: {pictureUrl?: string} | undefined;
   MediaUpload: {purpose?: 'general' | 'avatar'} | undefined;
-  PostDetail: {eventId: string; authorPubkeyHex: string};
+  PostDetail: {
+    eventId: string;
+    authorPubkeyHex: string;
+    /** Optional snapshot so profile/search open Instagram-style full post, not comments-only. */
+    mediaUrl?: string;
+    blurhash?: string;
+    mediaAlt?: string;
+    title?: string;
+    caption?: string;
+    aspectRatio?: number;
+    createdAt?: number;
+    openComments?: boolean;
+    /** When true, vertical detail feed is limited to this post's author (profile open). */
+    authorFeed?: boolean;
+  };
   Relays: undefined;
+  Messages: undefined;
+  SearchLookup: {query?: string} | undefined;
 };
 
 export type RootStackParamList = {

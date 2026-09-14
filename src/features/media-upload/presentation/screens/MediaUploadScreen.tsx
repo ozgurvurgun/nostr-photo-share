@@ -8,6 +8,7 @@ import {useTheme} from '../../../../shared/theme/ThemeProvider';
 import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
+import {Icon} from '../../../../shared/ui/Icon';
 import {MediaLightbox} from '../../../../shared/ui/MediaLightbox';
 import {ScreenHeader} from '../../../../shared/ui/ScreenHeader';
 import {StepProgress} from '../../../../shared/ui/StepProgress';
@@ -92,7 +93,23 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
               resizeMode="cover"
             />
           </Pressable>
-        ) : null}
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('mediaUpload.choosePhoto')}
+            disabled={inProgress}
+            onPress={() => {
+              onPrimary().catch(() => undefined);
+            }}
+            style={({pressed}) => [
+              styles.placeholder,
+              purpose === 'avatar' ? styles.placeholderAvatar : styles.placeholderWide,
+              pressed ? styles.previewPressed : null,
+            ]}>
+            <Icon name="image" size={36} color={theme.colors.text.disabled} />
+            <Text style={styles.placeholderLabel}>{t('mediaUpload.pickPlaceholder')}</Text>
+          </Pressable>
+        )}
 
         <UploadProgressBar
           progress={upload.progress}
@@ -103,12 +120,7 @@ export function MediaUploadScreen({navigation, route}: MediaUploadScreenProps): 
         />
 
         {upload.state === 'success' && upload.attachment ? (
-          <View style={styles.successBlock}>
-            <Text style={styles.successTitle}>{t('mediaUpload.uploadComplete')}</Text>
-            <Text selectable style={styles.url}>
-              {upload.attachment.url}
-            </Text>
-          </View>
+          <Text style={styles.successTitle}>{t('mediaUpload.uploadComplete')}</Text>
         ) : null}
 
         {upload.state === 'error' && upload.errorMessage ? (
@@ -175,19 +187,39 @@ function createStyles(theme: Theme, insetBottom: number) {
     previewPressed: {
       opacity: 0.85,
     },
-    successBlock: {
-      gap: theme.spacing.xs,
+    placeholder: {
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.colors.border.strong,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    placeholderAvatar: {
+      width: 160,
+      height: 160,
+      borderRadius: theme.radius.full,
+    },
+    placeholderWide: {
+      width: '100%',
+      height: theme.layout.mediaPreviewHeight,
+      borderRadius: theme.radius.md,
+    },
+    placeholderLabel: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.caption.fontSize,
+      fontWeight: '600',
+      textAlign: 'center',
+      paddingHorizontal: theme.spacing.md,
     },
     successTitle: {
       color: theme.colors.state.success,
       fontSize: theme.typography.body.fontSize,
       lineHeight: theme.typography.body.lineHeight,
       fontWeight: '600',
-    },
-    url: {
-      color: theme.colors.text.disabled,
-      fontSize: theme.typography.caption.fontSize,
-      lineHeight: theme.typography.caption.lineHeight,
+      textAlign: 'center',
     },
   });
 }

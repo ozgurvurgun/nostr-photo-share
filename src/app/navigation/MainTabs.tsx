@@ -21,6 +21,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {FeedScreen} from '../../features/feed/presentation/screens/FeedScreen';
 import {SearchScreen} from '../../features/profile/presentation/screens/SearchScreen';
 import {ProfileScreen} from '../../features/profile/presentation/screens/ProfileScreen';
+import {ActivityScreen} from '../../features/social/presentation/screens/ActivityScreen';
 import {StillHaptics} from '../../shared/haptics/haptics';
 import {t} from '../../shared/i18n';
 import {useTheme} from '../../shared/theme/ThemeProvider';
@@ -79,7 +80,17 @@ function SearchTabIcon({
   readonly color: string;
   readonly focused: boolean;
 }): React.JSX.Element {
-  return <TabIcon name="search" color={color} focused={focused} />;
+  return <TabIcon name="compass" color={color} focused={focused} />;
+}
+
+function ActivityTabIcon({
+  color,
+  focused,
+}: {
+  readonly color: string;
+  readonly focused: boolean;
+}): React.JSX.Element {
+  return <TabIcon name="bell" color={color} focused={focused} />;
 }
 
 function ProfileTabIcon({
@@ -185,6 +196,19 @@ export function MainTabs(): React.JSX.Element {
           tabBarLabel: () => null,
           tabBarIcon: () => null,
           tabBarButton: CreateTabButton,
+        }}
+      />
+      <Tab.Screen
+        name="Activity"
+        component={ActivityScreen}
+        listeners={{
+          tabPress: () => {
+            StillHaptics.tabChange();
+          },
+        }}
+        options={{
+          title: t('tabs.activity'),
+          tabBarIcon: ActivityTabIcon,
         }}
       />
       <Tab.Screen

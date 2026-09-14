@@ -1,14 +1,18 @@
-import React, {useEffect, useState} from 'react';
-import {Image, ScrollView, Text, View} from 'react-native';
+import React, {useEffect, useMemo, useState} from 'react';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import type {ImageStyle as FastImageStyle} from '@d11/react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {useAuthSession} from '../../../auth/presentation/hooks/useAuthSession';
 import {t} from '../../../../shared/i18n';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
+import {CachedImage} from '../../../../shared/ui/CachedImage';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {HelpModal} from '../../../../shared/ui/HelpModal';
+import {KeyboardScreen} from '../../../../shared/ui/KeyboardScreen';
 import {ScreenHeader} from '../../../../shared/ui/ScreenHeader';
 import {TextField} from '../../../../shared/ui/TextField';
 import {useProfile, useUpdateProfile} from '../hooks/useProfile';
@@ -21,6 +25,10 @@ export function EditProfileScreen({
 }: EditProfileScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.bottom),
+    [theme, insets.bottom],
+  );
   const {identity} = useAuthSession();
   const pubkeyHex = identity?.publicKey.toHex() ?? '';
   const profileQuery = useProfile(pubkeyHex.length > 0 ? pubkeyHex : undefined);
@@ -74,59 +82,38 @@ export function EditProfileScreen({
     updateProfile.error instanceof Error ? updateProfile.error.message : null;
   const photoLabel =
     displayName.trim() || name.trim() || t('profile.unnamed');
+  const pictureUri = picture.trim();
 
   return (
-    <View style={{flex: 1, backgroundColor: theme.colors.background.primary}}>
+    <KeyboardScreen style={styles.root}>
       <ScreenHeader
         title={t('editProfile.title')}
         onBack={() => navigation.goBack()}
         rightLabel={t('editProfile.save')}
         onRightPress={() => {
-          void onSave();
+          onSave().catch(() => undefined);
         }}
         rightDisabled={updateProfile.isPending}
         rightLoading={updateProfile.isPending}
       />
 
       <ScrollView
+        style={styles.scroll}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.lg,
-          paddingBottom: insets.bottom + theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}>
-        <View style={{alignItems: 'center', gap: theme.spacing.sm}}>
-          {picture.trim().length > 0 ? (
-            <Image
+        contentContainerStyle={styles.content}>
+        <View style={styles.avatarBlock}>
+          {pictureUri.length > 0 ? (
+            <CachedImage
+              uri={pictureUri}
               accessibilityLabel={t('profile.avatarA11y', {label: photoLabel})}
-              source={{uri: picture.trim()}}
-              style={{
-                width: 96,
-                height: 96,
-                borderRadius: theme.radius.full,
-                backgroundColor: theme.colors.background.elevated,
-              }}
+              style={styles.avatarImage}
+              containerStyle={styles.avatarContainer}
             />
           ) : (
             <View
               accessibilityLabel={t('profile.avatarPlaceholderA11y')}
-              style={{
-                width: 96,
-                height: 96,
-                borderRadius: theme.radius.full,
-                backgroundColor: theme.colors.background.elevated,
-                borderWidth: 1,
-                borderColor: theme.colors.border.default,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text
-                style={{
-                  color: theme.colors.text.secondary,
-                  fontSize: theme.typography.title.fontSize,
-                  fontWeight: '700',
-                }}>
+              style={styles.avatarFallback}>
+              <Text style={styles.avatarInitial}>
                 {(photoLabel.slice(0, 1) || '?').toUpperCase()}
               </Text>
             </View>
@@ -138,14 +125,7 @@ export function EditProfileScreen({
           />
         </View>
 
-        <Text
-          style={{
-            color: theme.colors.text.secondary,
-            fontSize: theme.typography.caption.fontSize,
-            lineHeight: theme.typography.caption.lineHeight,
-          }}>
-          {t('editProfile.body')}
-        </Text>
+        <Text style={styles.body}>{t('editProfile.body')}</Text>
 
         <TextField
           label={t('editProfile.displayName')}
@@ -167,18 +147,7 @@ export function EditProfileScreen({
           onChangeText={setAbout}
           placeholder={t('editProfile.about')}
           multiline
-          style={{
-            minHeight: theme.spacing.xxl + theme.spacing.lg,
-            textAlignVertical: 'top',
-          }}
-        />
-        <TextField
-          label={t('editProfile.picture')}
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={picture}
-          onChangeText={setPicture}
-          placeholder="https://"
+          style={styles.aboutField}
         />
         <TextField
           label={t('editProfile.nip05')}
@@ -195,16 +164,10 @@ export function EditProfileScreen({
             title={t('editProfile.saveFailed')}
             message={saveError}
             onRetry={() => {
-              void onSave();
+              onSave().catch(() => undefined);
             }}
           />
         ) : null}
-
-        <Button
-          label={t('editProfile.save')}
-          loading={updateProfile.isPending}
-          onPress={() => void onSave()}
-        />
       </ScrollView>
 
       <HelpModal
@@ -213,6 +176,62 @@ export function EditProfileScreen({
         body={t('editProfile.nip05HelpBody')}
         onClose={() => setShowNip05Help(false)}
       />
-    </View>
+    </KeyboardScreen>
   );
+}
+
+function createStyles(theme: Theme, insetBottom: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: insetBottom + theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    avatarBlock: {
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    avatarContainer: {
+      width: 96,
+      height: 96,
+      borderRadius: theme.radius.full,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    } as FastImageStyle,
+    avatarFallback: {
+      width: 96,
+      height: 96,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.background.elevated,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.border.default,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.title.fontSize,
+      fontWeight: '700',
+    },
+    body: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+    },
+    aboutField: {
+      minHeight: theme.spacing.xxl + theme.spacing.lg,
+      textAlignVertical: 'top',
+    },
+  });
 }

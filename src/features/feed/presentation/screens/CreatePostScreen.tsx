@@ -10,6 +10,7 @@ import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {Icon} from '../../../../shared/ui/Icon';
+import {KeyboardScreen} from '../../../../shared/ui/KeyboardScreen';
 import {MediaLightbox} from '../../../../shared/ui/MediaLightbox';
 import {StepProgress} from '../../../../shared/ui/StepProgress';
 import {TextField} from '../../../../shared/ui/TextField';
@@ -107,7 +108,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
   }
 
   return (
-    <View style={styles.root}>
+    <KeyboardScreen style={styles.root}>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
@@ -172,7 +173,24 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
                   resizeMode="cover"
                 />
               </Pressable>
-            ) : null}
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('createPost.chooseImage')}
+                disabled={uploading}
+                onPress={() => {
+                  onPick().catch(() => undefined);
+                }}
+                style={({pressed}) => [
+                  styles.pickPlaceholder,
+                  pressed ? styles.pressed : null,
+                ]}>
+                <Icon name="image" size={40} color={theme.colors.text.disabled} />
+                <Text style={styles.pickPlaceholderLabel}>
+                  {t('createPost.pickPlaceholder')}
+                </Text>
+              </Pressable>
+            )}
 
             <UploadProgressBar
               progress={upload.progress}
@@ -284,7 +302,7 @@ export function CreatePostScreen({navigation}: CreatePostScreenProps): React.JSX
         onClose={() => setViewerOpen(false)}
         accessibilityLabel={t('createPost.previewA11y')}
       />
-    </View>
+    </KeyboardScreen>
   );
 }
 
@@ -332,6 +350,26 @@ function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
       aspectRatio: 1,
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.background.elevated,
+    },
+    pickPlaceholder: {
+      width: '100%',
+      aspectRatio: 1,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.colors.border.strong,
+      backgroundColor: theme.colors.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+    },
+    pickPlaceholderLabel: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.caption.fontSize,
+      fontWeight: '600',
+    },
+    pressed: {
+      opacity: 0.75,
     },
     composeRow: {
       flexDirection: 'row',

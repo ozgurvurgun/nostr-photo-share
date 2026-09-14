@@ -33,6 +33,7 @@ function createStyles(theme: Theme) {
     row: {
       gap: theme.spacing.sm,
       paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.screenEdge,
     },
     item: {
       alignItems: 'center',

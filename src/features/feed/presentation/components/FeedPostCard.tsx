@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  Alert,
   Pressable,
   Share,
   StyleSheet,
@@ -14,6 +15,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import {formatCompactCount, formatRelativeTime, formatRelativeTimeLong} from '../../../../shared/format';
 import {t} from '../../../../shared/i18n';
 import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
@@ -29,31 +31,20 @@ import {emptyReactionSummary} from '../../../social/domain/Reaction';
 export type FeedPostCardProps = {
   readonly post: ImagePost;
   readonly reaction?: ReactionSummary;
+  readonly commentCount?: number;
   readonly onAuthorPress?: (pubkeyHex: string) => void;
   readonly onLikePress?: (post: ImagePost) => void;
   readonly onCommentPress?: (post: ImagePost) => void;
   readonly likePending?: boolean;
+  /** Shared clock from the parent list (avoids one timer per card). */
+  readonly nowSec?: number;
+  readonly variant?: 'feed' | 'detail';
+  readonly relayHost?: string;
+  readonly onPostPress?: (post: ImagePost) => void;
 };
 
 const DOUBLE_TAP_MS = 280;
-const AVATAR_SIZE = 36;
-
-function formatRelativeTime(createdAtSec: number, nowSec: number): string {
-  const delta = Math.max(0, nowSec - createdAtSec);
-  if (delta < 60) {
-    return t('feed.timeSec', {count: delta});
-  }
-  if (delta < 3600) {
-    return t('feed.timeMin', {count: Math.floor(delta / 60)});
-  }
-  if (delta < 86_400) {
-    return t('feed.timeHour', {count: Math.floor(delta / 3600)});
-  }
-  if (delta < 86_400 * 7) {
-    return t('feed.timeDay', {count: Math.floor(delta / 86_400)});
-  }
-  return t('feed.timeWeek', {count: Math.floor(delta / (86_400 * 7))});
-}
+const AVATAR_SIZE = 40;
 
 function AuthorAvatar({
   picture,
@@ -90,22 +81,30 @@ function AuthorAvatar({
 function FeedPostCardInner({
   post,
   reaction,
+  commentCount,
   onAuthorPress,
   onLikePress,
   onCommentPress,
   likePending = false,
+  nowSec: nowSecProp,
+  variant = 'feed',
+  relayHost,
+  onPostPress,
 }: FeedPostCardProps): React.JSX.Element {
   const theme = useTheme();
   const styles = useMemo(() => createCardStyles(theme), [theme]);
   const [failed, setFailed] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const [localNowSec, setLocalNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const lastTapRef = useRef(0);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDetail = variant === 'detail';
   const aspectRatio = useMemo(() => post.aspectRatio ?? 4 / 5, [post.aspectRatio]);
   const profile = useProfile(post.authorPubkeyHex);
   const summary = reaction ?? emptyReactionSummary(post.id);
   const liked = summary.likedByMe;
   const likeCount = summary.likeCount;
+  const nowSec = nowSecProp ?? localNowSec;
 
   const heartScale = useSharedValue(0);
   const heartOpacity = useSharedValue(0);
@@ -113,9 +112,12 @@ function FeedPostCardInner({
   const prevLikeCount = useRef(likeCount);
 
   useEffect(() => {
-    const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 30_000);
+    if (nowSecProp !== undefined) {
+      return;
+    }
+    const id = setInterval(() => setLocalNowSec(Math.floor(Date.now() / 1000)), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [nowSecProp]);
 
   useEffect(() => {
     if (prevLikeCount.current === likeCount) {
@@ -141,7 +143,34 @@ function FeedPostCardInner({
     return `${post.authorPubkeyHex.slice(0, 8)}...`;
   }, [profile.data, post.authorPubkeyHex]);
 
+  const handle = useMemo(() => {
+    const name = profile.data?.name.trim();
+    if (name && name.length > 0) {
+      return name.replace(/^@/, '');
+    }
+    return post.authorPubkeyHex.slice(0, 8);
+  }, [profile.data, post.authorPubkeyHex]);
+
+  const bodyText = useMemo(() => {
+    if (post.caption.length > 0) {
+      return post.caption;
+    }
+    if (post.title.length > 0 && post.title !== t('createPost.defaultTitle')) {
+      return post.title;
+    }
+    return '';
+  }, [post.caption, post.title]);
+
   const relativeTime = formatRelativeTime(post.createdAt, nowSec);
+  const relativeTimeLong = formatRelativeTimeLong(post.createdAt, nowSec);
+
+  useEffect(() => {
+    return () => {
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+      }
+    };
+  }, []);
 
   const playHeartBurst = useCallback(() => {
     heartScale.value = 0.35;
@@ -168,6 +197,10 @@ function FeedPostCardInner({
   const onMediaPress = useCallback(() => {
     const now = Date.now();
     if (now - lastTapRef.current < DOUBLE_TAP_MS) {
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
       lastTapRef.current = 0;
       playHeartBurst();
       if (!liked) {
@@ -178,7 +211,13 @@ function FeedPostCardInner({
       return;
     }
     lastTapRef.current = now;
-  }, [liked, playHeartBurst, triggerLike]);
+    if (onPostPress && !isDetail) {
+      singleTapTimer.current = setTimeout(() => {
+        singleTapTimer.current = null;
+        onPostPress(post);
+      }, DOUBLE_TAP_MS);
+    }
+  }, [isDetail, liked, onPostPress, playHeartBurst, post, triggerLike]);
 
   const onShare = useCallback(async () => {
     try {
@@ -198,6 +237,19 @@ function FeedPostCardInner({
     setSaved(prev => !prev);
   }, []);
 
+  const onOpenMore = useCallback(() => {
+    StillHaptics.selection();
+    Alert.alert(displayName, undefined, [
+      {
+        text: t('feed.share'),
+        onPress: () => {
+          onShare().catch(() => undefined);
+        },
+      },
+      {text: t('common.cancel'), style: 'cancel'},
+    ]);
+  }, [displayName, onShare]);
+
   const heartStyle = useAnimatedStyle(() => ({
     opacity: heartOpacity.value,
     transform: [{scale: heartScale.value}],
@@ -207,34 +259,57 @@ function FeedPostCardInner({
     transform: [{scale: likeCountScale.value}],
   }));
 
+  const compactLikes = formatCompactCount(likeCount);
+  const compactComments =
+    commentCount === undefined ? undefined : formatCompactCount(commentCount);
+
   return (
-    <View style={styles.card}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('feed.authorA11y', {short: displayName})}
-        disabled={!onAuthorPress}
-        onPress={() => onAuthorPress?.(post.authorPubkeyHex)}
-        style={({pressed}) => [styles.header, pressed ? styles.pressed : null]}>
-        <AuthorAvatar
-          picture={profile.data?.picture ?? ''}
-          label={displayName}
-          size={AVATAR_SIZE}
-        />
-        <View style={styles.headerText}>
-          <Text numberOfLines={1} style={styles.username}>
-            {displayName}
-          </Text>
-          <Text numberOfLines={1} style={styles.timestamp}>
-            {relativeTime}
-          </Text>
-        </View>
-      </Pressable>
+    <View style={isDetail ? styles.detailCard : styles.card}>
+      <View style={[styles.header, isDetail ? styles.detailPad : null]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('feed.authorA11y', {short: displayName})}
+          disabled={!onAuthorPress}
+          onPress={() => onAuthorPress?.(post.authorPubkeyHex)}
+          style={({pressed}) => [styles.authorHit, pressed ? styles.pressed : null]}>
+          <AuthorAvatar
+            picture={profile.data?.picture ?? ''}
+            label={displayName}
+            size={AVATAR_SIZE}
+          />
+          <View style={styles.headerText}>
+            <View style={styles.nameRow}>
+              <Text numberOfLines={1} style={styles.username}>
+                {displayName}
+              </Text>
+              {isDetail ? (
+                <Icon name="check" size={16} color={theme.colors.accent.primary} />
+              ) : null}
+            </View>
+            <Text numberOfLines={1} style={styles.meta}>
+              @{handle} · {relativeTime}
+            </Text>
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('feed.moreA11y')}
+          hitSlop={theme.layout.hitSlop}
+          onPress={onOpenMore}
+          style={({pressed}) => [styles.moreHit, pressed ? styles.pressed : null]}>
+          <Icon name="ellipsis" size={20} color={theme.colors.text.secondary} />
+        </Pressable>
+      </View>
 
       <Pressable
         accessibilityRole="imagebutton"
         accessibilityLabel={t('feed.doubleTapLikeA11y')}
         onPress={onMediaPress}
-        style={[styles.mediaWrap, {aspectRatio}]}>
+        style={[
+          styles.mediaWrap,
+          {aspectRatio},
+          isDetail ? styles.detailMedia : null,
+        ]}>
         {failed ? (
           <View style={styles.mediaFallback}>
             <Text style={styles.mediaFallbackText}>{t('feed.imageUnavailable')}</Text>
@@ -245,6 +320,7 @@ function FeedPostCardInner({
             blurhash={post.media.blurhash}
             accessibilityLabel={post.media.alt ?? post.title}
             style={styles.mediaImage}
+            containerStyle={styles.mediaImageContainer}
             resizeMode="cover"
             onError={() => setFailed(true)}
           />
@@ -254,94 +330,115 @@ function FeedPostCardInner({
         </Animated.View>
       </Pressable>
 
-      <View style={styles.body}>
-        <View style={styles.actions}>
-          <View style={styles.actionsLeft}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                liked
-                  ? t('feed.liked')
-                  : t('feed.likeCountA11y', {count: String(likeCount)})
-              }
-              accessibilityState={{selected: liked, busy: likePending}}
-              disabled={likePending || liked || !onLikePress}
-              onPress={triggerLike}
-              style={({pressed}) => [
-                styles.actionHit,
-                pressed ? styles.pressed : null,
-              ]}>
-              <Icon
-                name={liked ? 'heartFill' : 'heart'}
-                size={26}
-                color={liked ? theme.colors.accent.primary : theme.colors.text.primary}
-              />
-              <Animated.Text
-                style={[
-                  styles.likeCount,
-                  liked ? styles.likeCountActive : null,
-                  likeCountStyle,
-                ]}>
-                {likeCount}
-              </Animated.Text>
-            </Pressable>
+      {!isDetail && bodyText.length > 0 ? (
+        <Text style={styles.caption}>{bodyText}</Text>
+      ) : null}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('feed.comment')}
-              disabled={!onCommentPress}
-              onPress={() => {
-                StillHaptics.selection();
-                onCommentPress?.(post);
-              }}
-              style={({pressed}) => [
-                styles.actionHit,
-                pressed ? styles.pressed : null,
-              ]}>
-              <Icon name="comment" size={26} color={theme.colors.text.primary} />
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('feed.share')}
-              onPress={() => {
-                onShare().catch(() => undefined);
-              }}
-              style={({pressed}) => [
-                styles.actionHit,
-                pressed ? styles.pressed : null,
-              ]}>
-              <Icon name="share" size={24} color={theme.colors.text.primary} />
-            </Pressable>
-          </View>
-
+      <View style={[styles.actions, isDetail ? styles.detailPad : null]}>
+        <View style={styles.actionsLeft}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={saved ? t('feed.saved') : t('feed.save')}
-            accessibilityState={{selected: saved}}
-            onPress={onToggleSave}
+            accessibilityLabel={
+              liked
+                ? t('feed.liked')
+                : t('feed.likeCountA11y', {count: compactLikes})
+            }
+            accessibilityState={{selected: liked, busy: likePending}}
+            disabled={likePending || liked || !onLikePress}
+            onPress={triggerLike}
             style={({pressed}) => [
               styles.actionHit,
               pressed ? styles.pressed : null,
             ]}>
             <Icon
-              name={saved ? 'bookmarkFill' : 'bookmark'}
-              size={24}
-              color={saved ? theme.colors.accent.primary : theme.colors.text.primary}
+              name={liked ? 'heartFill' : 'heart'}
+              size={22}
+              color={liked ? theme.colors.accent.primary : theme.colors.text.secondary}
             />
+            {!isDetail ? (
+              <Animated.Text
+                style={[
+                  styles.count,
+                  liked ? styles.countActive : null,
+                  likeCountStyle,
+                ]}>
+                {compactLikes}
+              </Animated.Text>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              compactComments !== undefined
+                ? t('feed.commentCountA11y', {count: compactComments})
+                : t('feed.comment')
+            }
+            disabled={!onCommentPress}
+            onPress={() => {
+              StillHaptics.selection();
+              onCommentPress?.(post);
+            }}
+            style={({pressed}) => [
+              styles.actionHit,
+              pressed ? styles.pressed : null,
+            ]}>
+            <Icon name="comment" size={22} color={theme.colors.text.secondary} />
+            {!isDetail && compactComments !== undefined ? (
+              <Text style={styles.count}>{compactComments}</Text>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('feed.share')}
+            onPress={() => {
+              onShare().catch(() => undefined);
+            }}
+            style={({pressed}) => [
+              styles.actionHit,
+              pressed ? styles.pressed : null,
+            ]}>
+            <Icon name="share" size={22} color={theme.colors.text.secondary} />
           </Pressable>
         </View>
 
-        {post.title.length > 0 ? (
-          <Text style={styles.caption}>
-            <Text style={styles.captionAuthor}>{displayName} </Text>
-            {post.title}
-          </Text>
-        ) : null}
-        {post.caption.length > 0 && post.caption !== post.title ? (
-          <Text style={styles.captionSecondary}>{post.caption}</Text>
-        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={saved ? t('feed.saved') : t('feed.save')}
+          accessibilityState={{selected: saved}}
+          onPress={onToggleSave}
+          style={({pressed}) => [
+            styles.actionHit,
+            pressed ? styles.pressed : null,
+          ]}>
+          <Icon
+            name={saved ? 'bookmarkFill' : 'bookmark'}
+            size={22}
+            color={saved ? theme.colors.accent.primary : theme.colors.text.secondary}
+          />
+        </Pressable>
       </View>
+
+      {isDetail ? (
+        <View style={styles.detailPad}>
+          {likeCount > 0 ? (
+            <Text style={styles.likesLabel}>
+              {t('feed.likesLabel', {count: compactLikes})}
+            </Text>
+          ) : null}
+          {bodyText.length > 0 ? (
+            <Text style={styles.detailCaption}>
+              <Text style={styles.captionName}>{displayName} </Text>
+              {bodyText}
+            </Text>
+          ) : null}
+          <Text style={styles.detailStamp}>
+            {relativeTimeLong}
+            {relayHost ? ` · ${relayHost}` : ''}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -382,38 +479,65 @@ function createCardStyles(theme: Theme) {
   return StyleSheet.create({
     card: {
       marginHorizontal: theme.spacing.screenEdge,
-      borderRadius: theme.radius.lg,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+      borderRadius: theme.radius.md,
       backgroundColor: theme.colors.background.elevated,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.colors.border.subtle,
       overflow: 'hidden',
       ...theme.elevation.card,
-      gap: 0,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
+    },
+    authorHit: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      minWidth: 0,
     },
     headerText: {
       flex: 1,
       gap: 2,
+      minWidth: 0,
     },
     username: {
       color: theme.colors.text.primary,
       fontSize: theme.typography.username.fontSize,
       lineHeight: theme.typography.username.lineHeight,
       fontWeight: theme.typography.username.fontWeight,
+      flexShrink: 1,
     },
-    timestamp: {
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    meta: {
       color: theme.colors.text.secondary,
       fontSize: theme.typography.timestamp.fontSize,
       lineHeight: theme.typography.timestamp.lineHeight,
     },
+    moreHit: {
+      width: theme.layout.headerControlSize,
+      height: theme.layout.headerControlSize,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    caption: {
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.body.fontSize,
+      lineHeight: theme.typography.body.lineHeight,
+    },
     mediaWrap: {
       width: '100%',
+      borderRadius: theme.radius.md,
       backgroundColor: theme.colors.background.surface,
       overflow: 'hidden',
     },
@@ -421,6 +545,9 @@ function createCardStyles(theme: Theme) {
       width: '100%',
       height: '100%',
     } as FastImageStyle,
+    mediaImageContainer: {
+      ...StyleSheet.absoluteFill,
+    },
     mediaFallback: {
       flex: 1,
       alignItems: 'center',
@@ -442,12 +569,6 @@ function createCardStyles(theme: Theme) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    body: {
-      paddingHorizontal: theme.spacing.md,
-      paddingTop: theme.spacing.sm,
-      paddingBottom: theme.spacing.md,
-      gap: theme.spacing.xs,
-    },
     actions: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -464,27 +585,47 @@ function createCardStyles(theme: Theme) {
       gap: theme.spacing.xxs,
       minHeight: 36,
     },
-    likeCount: {
+    count: {
       color: theme.colors.text.secondary,
       fontSize: theme.typography.caption.fontSize,
       fontWeight: '600',
       minWidth: 12,
     },
-    likeCountActive: {
+    countActive: {
       color: theme.colors.accent.primary,
     },
-    caption: {
+    detailCard: {
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.background.primary,
+    },
+    detailPad: {
+      paddingHorizontal: theme.spacing.screenEdge,
+    },
+    detailMedia: {
+      borderRadius: 0,
+      width: '100%',
+    },
+    likesLabel: {
+      color: theme.colors.text.primary,
+      fontWeight: '700',
+      fontSize: theme.typography.caption.fontSize,
+      marginBottom: 4,
+    },
+    detailCaption: {
       color: theme.colors.text.primary,
       fontSize: theme.typography.body.fontSize,
       lineHeight: theme.typography.body.lineHeight,
     },
-    captionAuthor: {
-      fontWeight: theme.typography.username.fontWeight,
+    captionName: {
+      color: theme.colors.text.primary,
+      fontWeight: '700',
     },
-    captionSecondary: {
-      color: theme.colors.text.secondary,
-      fontSize: theme.typography.body.fontSize,
-      lineHeight: theme.typography.body.lineHeight,
+    detailStamp: {
+      color: theme.colors.text.disabled,
+      fontSize: theme.typography.timestamp.fontSize,
+      marginTop: 6,
     },
     pressed: {
       opacity: 0.72,

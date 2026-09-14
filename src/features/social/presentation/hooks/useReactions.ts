@@ -1,5 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {useAppContainer} from '../../../../app/providers/AppContainerContext';
 import {useAuthSession} from '../../../auth/presentation/hooks/useAuthSession';
 import {
@@ -7,7 +7,11 @@ import {
   type Reaction,
   type ReactionSummary,
 } from '../../domain/Reaction';
-import {reactionQueryKey, reactionsQueryKey, socialQueryKeyRoot} from '../socialQueryKeys';
+import {
+  reactionQueryKey,
+  reactionsFeedBatchQueryKey,
+  socialQueryKeyRoot,
+} from '../socialQueryKeys';
 
 export type ReactionsBatchData = {
   readonly byEventId: Readonly<Record<string, ReactionSummary>>;
@@ -20,42 +24,77 @@ export type ReactionQueryData = {
 };
 
 /**
- * Loads NIP-25 like summaries for many posts in one relay round-trip.
+ * Loads NIP-25 like summaries for feed posts.
+ * Uses one stable cache key and only fetches ids that are not yet in the batch
+ * (avoids full refetch when the feed paginates).
  */
 export function usePostReactions(eventIds: readonly string[]) {
   const container = useAppContainer();
+  const queryClient = useQueryClient();
   const {identity} = useAuthSession();
   const viewer = identity?.publicKey.toHex() ?? null;
   const ids = useMemo(
     () => [...new Set(eventIds.map(id => id.trim().toLowerCase()).filter(Boolean))],
     [eventIds],
   );
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
 
   const query = useQuery({
-    queryKey: reactionsQueryKey(ids),
+    queryKey: reactionsFeedBatchQueryKey,
     enabled: ids.length > 0,
     queryFn: async (): Promise<ReactionsBatchData> => {
-      const result = await container.getPostReactions.execute(ids, viewer);
-      if (!result.ok) {
-        const byEventId: Record<string, ReactionSummary> = {};
-        for (const eventId of ids) {
-          byEventId[eventId] = container.getPostReactions.getCached(eventId);
+      const currentIds = idsRef.current;
+      const previous = queryClient.getQueryData<ReactionsBatchData>(
+        reactionsFeedBatchQueryKey,
+      );
+      const known: Record<string, ReactionSummary> = {
+        ...(previous?.byEventId ?? {}),
+      };
+      const missing = currentIds.filter(id => known[id] === undefined);
+
+      let fromCache = previous?.fromCache ?? true;
+      if (missing.length > 0) {
+        const result = await container.getPostReactions.execute(missing, viewer);
+        if (!result.ok) {
+          for (const eventId of missing) {
+            known[eventId] = container.getPostReactions.getCached(eventId);
+          }
+          fromCache = true;
+        } else {
+          fromCache = result.value.fromCache && (previous?.fromCache ?? true);
+          for (const summary of result.value.summaries) {
+            known[summary.targetEventId] = summary;
+          }
+          for (const eventId of missing) {
+            if (known[eventId] === undefined) {
+              known[eventId] = emptyReactionSummary(eventId);
+            }
+          }
         }
-        return {byEventId, fromCache: true};
       }
-      const byEventId: Record<string, ReactionSummary> = {};
-      for (const summary of result.value.summaries) {
-        byEventId[summary.targetEventId] = summary;
-      }
-      for (const eventId of ids) {
-        if (byEventId[eventId] === undefined) {
-          byEventId[eventId] = emptyReactionSummary(eventId);
-        }
-      }
-      return {byEventId, fromCache: result.value.fromCache};
+
+      return {byEventId: known, fromCache};
     },
-    staleTime: 20_000,
+    staleTime: 45_000,
   });
+
+  const missingCount = useMemo(() => {
+    const known = query.data?.byEventId;
+    if (!known) {
+      return ids.length;
+    }
+    return ids.reduce((count, id) => (known[id] === undefined ? count + 1 : count), 0);
+  }, [ids, query.data?.byEventId]);
+
+  const {refetch, isFetching} = query;
+
+  useEffect(() => {
+    if (ids.length === 0 || missingCount === 0 || isFetching) {
+      return;
+    }
+    refetch().catch(() => undefined);
+  }, [ids.length, missingCount, isFetching, refetch]);
 
   const byEventId = useMemo(() => {
     const map = new Map<string, ReactionSummary>();

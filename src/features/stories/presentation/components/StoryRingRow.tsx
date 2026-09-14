@@ -42,11 +42,14 @@ export function StoryRingRow({
   const ringWidth = theme.layout.storyRingWidth;
   const columnWidth = avatarSize + theme.layout.storyRingGap + ringWidth * 2;
 
-  const ordered = useMemo(() => {
-    const self = stacks.find(s => s.authorPubkeyHex === selfPubkeyHex);
-    const others = stacks.filter(s => s.authorPubkeyHex !== selfPubkeyHex);
-    return self ? [self, ...others] : [...others];
-  }, [stacks, selfPubkeyHex]);
+  const selfStack = useMemo(
+    () => stacks.find(stack => stack.authorPubkeyHex === selfPubkeyHex),
+    [selfPubkeyHex, stacks],
+  );
+  const others = useMemo(
+    () => stacks.filter(stack => stack.authorPubkeyHex !== selfPubkeyHex),
+    [selfPubkeyHex, stacks],
+  );
 
   if (loading && stacks.length === 0) {
     return <StoryRingSkeleton />;
@@ -57,18 +60,22 @@ export function StoryRingRow({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}>
-      <CreateStoryChip
-        onPress={onCreateStory}
+      <SelfStoryChip
+        selfPubkeyHex={selfPubkeyHex}
+        stack={selfStack}
+        unseen={selfStack ? authorStackHasUnseen(selfStack, seenIds) : true}
+        onCreateStory={onCreateStory}
+        onOpenAuthor={onOpenAuthor}
         avatarSize={avatarSize}
         ringWidth={ringWidth}
         columnWidth={columnWidth}
       />
-      {ordered.map(stack => (
+      {others.map(stack => (
         <StoryRingAvatar
           key={stack.authorPubkeyHex}
           stack={stack}
           unseen={authorStackHasUnseen(stack, seenIds)}
-          isSelf={stack.authorPubkeyHex === selfPubkeyHex}
+          isSelf={false}
           onPress={() => onOpenAuthor(stack.authorPubkeyHex)}
           avatarSize={avatarSize}
           ringWidth={ringWidth}
@@ -79,42 +86,98 @@ export function StoryRingRow({
   );
 }
 
-function CreateStoryChip({
-  onPress,
+function SelfStoryChip({
+  selfPubkeyHex,
+  stack,
+  unseen,
+  onCreateStory,
+  onOpenAuthor,
   avatarSize,
   ringWidth,
   columnWidth,
 }: {
-  readonly onPress: () => void;
+  readonly selfPubkeyHex: string;
+  readonly stack: AuthorStoryStack | undefined;
+  readonly unseen: boolean;
+  readonly onCreateStory: () => void;
+  readonly onOpenAuthor: (authorPubkeyHex: string) => void;
   readonly avatarSize: number;
   readonly ringWidth: number;
   readonly columnWidth: number;
 }): React.JSX.Element {
   const theme = useTheme();
+  const profile = useProfile(selfPubkeyHex);
   const styles = useMemo(
     () => createChipStyles(theme, avatarSize, ringWidth, columnWidth),
     [theme, avatarSize, ringWidth, columnWidth],
   );
+  const label =
+    profile.data?.displayName?.trim() ||
+    profile.data?.name?.trim() ||
+    t('storyRing.you');
+  const picture = profile.data?.picture?.trim() ?? '';
+  const ringSize = avatarSize + ringWidth * 2 + 4;
+  const hasStories = Boolean(stack && stack.stories.length > 0);
+
+  const onAvatarPress = () => {
+    triggerHaptic('selection');
+    if (hasStories) {
+      onOpenAuthor(selfPubkeyHex);
+      return;
+    }
+    onCreateStory();
+  };
+
+  const onBadgePress = () => {
+    triggerHaptic('selection');
+    onCreateStory();
+  };
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t('storyRing.createA11y')}
-      onPress={() => {
-        triggerHaptic('selection');
-        onPress();
-      }}
+      accessibilityLabel={
+        hasStories
+          ? t('storyRing.storiesA11y', {
+              label,
+              unseen: unseen ? t('storyRing.unseenSuffix') : t('storyRing.seenSuffix'),
+            })
+          : t('storyRing.createA11y')
+      }
+      onPress={onAvatarPress}
       style={({pressed}) => [styles.column, pressed ? styles.pressed : null]}>
-      <View style={styles.createOuter}>
-        <View style={styles.createInner}>
-          <Icon name="plus" size={28} color={theme.colors.accent.primary} />
+      <View style={styles.ringWrap}>
+        <StoryGradientRing
+          size={ringSize}
+          strokeWidth={ringWidth}
+          unseen={unseen || !hasStories}
+        />
+        <View style={styles.avatarFrame}>
+          {picture.length > 0 ? (
+            <CachedImage
+              uri={picture}
+              style={styles.avatarImage}
+              accessibilityLabel={label}
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarInitial}>
+                {label.slice(0, 1).toUpperCase()}
+              </Text>
+            </View>
+          )}
         </View>
-        <View style={styles.createBadge}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('storyRing.createA11y')}
+          hitSlop={theme.layout.hitSlop}
+          onPress={onBadgePress}
+          style={styles.createBadge}>
           <Icon name="plus" size={12} color={theme.colors.accent.onAccent} />
-        </View>
+        </Pressable>
       </View>
       <Text numberOfLines={1} style={styles.label}>
-        {t('storyRing.yourStory')}
+        {t('storyRing.you')}
       </Text>
     </Pressable>
   );
@@ -245,6 +308,7 @@ function createRowStyles(theme: Theme) {
     row: {
       gap: theme.spacing.sm,
       paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.screenEdge,
       alignItems: 'flex-start',
     },
   });
@@ -256,7 +320,7 @@ function createChipStyles(
   ringWidth: number,
   columnWidth: number,
 ) {
-  const outer = avatarSize + ringWidth * 2 + 4;
+  const ringSize = avatarSize + ringWidth * 2 + 4;
   return StyleSheet.create({
     column: {
       alignItems: 'center',
@@ -267,29 +331,39 @@ function createChipStyles(
       opacity: 0.75,
       transform: [{scale: 0.96}],
     },
-    createOuter: {
-      width: outer,
-      height: outer,
-      borderRadius: theme.radius.full,
-      borderWidth: ringWidth,
-      borderStyle: 'dashed',
-      borderColor: theme.colors.accent.muted,
+    ringWrap: {
+      width: ringSize,
+      height: ringSize,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.background.surface,
     },
-    createInner: {
+    avatarFrame: {
       width: avatarSize,
       height: avatarSize,
       borderRadius: theme.radius.full,
+      overflow: 'hidden',
+      backgroundColor: theme.colors.background.elevated,
+      borderWidth: 2,
+      borderColor: theme.colors.background.primary,
+    },
+    avatarImage: {
+      width: '100%',
+      height: '100%',
+    } as FastImageStyle,
+    avatarFallback: {
+      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.background.elevated,
+    },
+    avatarInitial: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.username.fontSize,
+      fontWeight: theme.typography.username.fontWeight,
     },
     createBadge: {
       position: 'absolute',
-      right: 2,
-      bottom: 2,
+      right: 0,
+      bottom: 0,
       width: 22,
       height: 22,
       borderRadius: theme.radius.full,
@@ -300,9 +374,10 @@ function createChipStyles(
       borderColor: theme.colors.background.primary,
     },
     label: {
-      color: theme.colors.text.secondary,
+      color: theme.colors.text.primary,
       fontSize: theme.typography.caption.fontSize,
       lineHeight: theme.typography.caption.lineHeight,
+      fontWeight: theme.typography.username.fontWeight,
       maxWidth: columnWidth,
       textAlign: 'center',
     },

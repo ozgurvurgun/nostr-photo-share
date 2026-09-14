@@ -13,18 +13,18 @@ export function FeedSkeletonList({count = 3}: {readonly count?: number}): React.
       {Array.from({length: count}, (_, index) => (
         <View key={index} style={styles.card}>
           <View style={styles.header}>
-            <Skeleton width={36} height={36} radius={theme.radius.full} />
+            <Skeleton width={40} height={40} radius={theme.radius.full} />
             <View style={styles.headerText}>
               <Skeleton height={12} width="42%" />
-              <Skeleton height={10} width="24%" />
+              <Skeleton height={10} width="36%" />
             </View>
           </View>
-          <Skeleton height={theme.layout.feedCardMediaMinHeight} radius={0} />
-          <View style={styles.body}>
-            <Skeleton height={14} width="28%" />
-            <Skeleton height={14} width="78%" />
-            <Skeleton height={12} width="55%" />
-          </View>
+          <Skeleton height={48} width="88%" radius={theme.radius.sm} />
+          <Skeleton
+            height={theme.layout.feedCardMediaMinHeight}
+            radius={theme.radius.md}
+          />
+          <Skeleton height={14} width="40%" />
         </View>
       ))}
     </View>
@@ -38,12 +38,14 @@ function createStyles(theme: Theme) {
       paddingHorizontal: theme.spacing.screenEdge,
     },
     card: {
-      borderRadius: theme.radius.lg,
+      borderRadius: theme.radius.md,
       overflow: 'hidden',
       backgroundColor: theme.colors.background.elevated,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.colors.border.subtle,
       gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      paddingTop: theme.spacing.sm,
       paddingBottom: theme.spacing.md,
       ...theme.elevation.card,
     },
@@ -51,16 +53,10 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
-      paddingTop: theme.spacing.sm,
     },
     headerText: {
       flex: 1,
       gap: theme.spacing.xxs,
-    },
-    body: {
-      gap: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.md,
     },
   });
 }

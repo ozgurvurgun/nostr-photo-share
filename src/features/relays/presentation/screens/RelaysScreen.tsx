@@ -1,14 +1,17 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Pressable, ScrollView, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {useAuthSession} from '../../../auth/presentation/hooks/useAuthSession';
 import {t} from '../../../../shared/i18n';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import type {Theme} from '../../../../shared/theme/types';
 import {Button} from '../../../../shared/ui/Button';
 import {EmptyState} from '../../../../shared/ui/EmptyState';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
+import {Icon} from '../../../../shared/ui/Icon';
+import {KeyboardScreen} from '../../../../shared/ui/KeyboardScreen';
 import {OfflineBanner} from '../../../../shared/ui/OfflineBanner';
 import {ScreenHeader} from '../../../../shared/ui/ScreenHeader';
 import {Skeleton} from '../../../../shared/ui/Skeleton';
@@ -33,9 +36,27 @@ function healthLabel(connected: boolean, reconnecting: boolean): string {
   return t('relays.statusOffline');
 }
 
+function statusDotColor(
+  connected: boolean,
+  reconnecting: boolean,
+  theme: Theme,
+): string {
+  if (connected) {
+    return theme.colors.state.success;
+  }
+  if (reconnecting) {
+    return theme.colors.state.warning;
+  }
+  return theme.colors.text.disabled;
+}
+
 export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(theme, insets.bottom),
+    [theme, insets.bottom],
+  );
   const {identity} = useAuthSession();
   const pubkeyHex = identity?.publicKey.toHex() ?? '';
   const listQuery = useRelayList(pubkeyHex.length > 0 ? pubkeyHex : undefined);
@@ -122,27 +143,14 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
   }
 
   if (!identity) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.background.primary,
-          padding: theme.spacing.screenEdge,
-        }}
-      />
-    );
+    return <View style={styles.rootEmpty} />;
   }
 
   if (listQuery.isLoading && !hydrated) {
     return (
-      <View style={{flex: 1, backgroundColor: theme.colors.background.primary}}>
+      <View style={styles.root}>
         <ScreenHeader title={t('relays.title')} onBack={() => navigation.goBack()} />
-        <View
-          style={{
-            paddingHorizontal: theme.spacing.screenEdge,
-            paddingTop: theme.spacing.lg,
-            gap: theme.spacing.md,
-          }}>
+        <View style={styles.loadingBlock}>
           <Skeleton height={64} />
           <Skeleton height={64} />
           <Skeleton height={64} />
@@ -153,9 +161,9 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
 
   if (listQuery.isError && !hydrated) {
     return (
-      <View style={{flex: 1, backgroundColor: theme.colors.background.primary}}>
+      <View style={styles.root}>
         <ScreenHeader title={t('relays.title')} onBack={() => navigation.goBack()} />
-        <View style={{paddingHorizontal: theme.spacing.screenEdge, paddingTop: theme.spacing.lg}}>
+        <View style={styles.errorBlock}>
           <ErrorState
             title={t('relays.loadFailed')}
             message={
@@ -164,7 +172,7 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
                 : t('common.unknownError')
             }
             onRetry={() => {
-              void listQuery.refetch();
+              listQuery.refetch().catch(() => undefined);
             }}
           />
         </View>
@@ -173,33 +181,24 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
   }
 
   return (
-    <View style={{flex: 1, backgroundColor: theme.colors.background.primary}}>
+    <KeyboardScreen style={styles.root}>
       <ScreenHeader
         title={t('relays.title')}
         onBack={() => navigation.goBack()}
         rightLabel={t('relays.savePublish')}
         onRightPress={() => {
-          void onSave();
+          onSave().catch(() => undefined);
         }}
         rightDisabled={updateRelayList.isPending}
         rightLoading={updateRelayList.isPending}
       />
       <ScrollView
+        style={styles.scroll}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.screenEdge,
-          paddingTop: theme.spacing.md,
-          paddingBottom: insets.bottom + theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}>
+        contentContainerStyle={styles.content}>
         <OfflineBanner visible={offline} message={t('relays.offlineBanner')} />
 
-        <Text
-          style={{
-            color: theme.colors.text.secondary,
-            fontSize: theme.typography.caption.fontSize,
-            lineHeight: theme.typography.caption.lineHeight,
-          }}>
+        <Text style={styles.body}>
           {t('relays.body', {min: RECOMMENDED_RELAYS_MIN, max: RECOMMENDED_RELAYS_MAX})}
         </Text>
 
@@ -208,42 +207,23 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
         ) : (
           draft.map(pref => {
             const health = healthByUrl.get(pref.url);
-            const status = healthLabel(
-              health?.connected ?? false,
-              health?.reconnecting ?? false,
-            );
             const connected = health?.connected ?? false;
+            const reconnecting = health?.reconnecting ?? false;
+            const status = healthLabel(connected, reconnecting);
+            const dotColor = statusDotColor(connected, reconnecting, theme);
             return (
-              <View
-                key={pref.url}
-                style={{
-                  gap: theme.spacing.sm,
-                  padding: theme.spacing.md,
-                  borderRadius: theme.radius.md,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border.default,
-                  backgroundColor: theme.colors.background.elevated,
-                }}>
-                <Text
-                  selectable
-                  style={{
-                    color: theme.colors.text.primary,
-                    fontSize: theme.typography.body.fontSize,
-                    fontWeight: '600',
-                  }}>
-                  {pref.url.replace(/^wss?:\/\//, '')}
-                </Text>
-                <Text
-                  style={{
-                    color: connected
-                      ? theme.colors.state.success
-                      : theme.colors.text.disabled,
-                    fontSize: theme.typography.caption.fontSize,
-                    fontWeight: '600',
-                  }}>
-                  {status}
-                </Text>
-                <View style={{flexDirection: 'row', gap: theme.spacing.sm, flexWrap: 'wrap'}}>
+              <View key={pref.url} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Icon name="relay" size={20} color={theme.colors.text.secondary} />
+                  <Text selectable style={styles.cardUrl}>
+                    {pref.url.replace(/^wss?:\/\//, '')}
+                  </Text>
+                </View>
+                <View style={styles.statusRow}>
+                  <View style={[styles.statusDot, {backgroundColor: dotColor}]} />
+                  <Text style={[styles.statusLabel, {color: dotColor}]}>{status}</Text>
+                </View>
+                <View style={styles.flagsRow}>
                   <FlagToggle
                     label={t('relays.read')}
                     active={pref.read}
@@ -258,19 +238,12 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
                     accessibilityRole="button"
                     accessibilityLabel={t('relays.remove')}
                     onPress={() => onRemove(pref.url)}
-                    style={({pressed}) => ({
-                      paddingVertical: theme.spacing.xs,
-                      paddingHorizontal: theme.spacing.sm,
-                      opacity: pressed ? 0.7 : 1,
-                    })}>
-                    <Text
-                      style={{
-                        color: theme.colors.state.error,
-                        fontSize: theme.typography.caption.fontSize,
-                        fontWeight: '600',
-                      }}>
-                      {t('relays.remove')}
-                    </Text>
+                    hitSlop={theme.layout.hitSlop}
+                    style={({pressed}) => [
+                      styles.removeButton,
+                      pressed ? styles.pressed : null,
+                    ]}>
+                    <Text style={styles.removeLabel}>{t('relays.remove')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -289,24 +262,10 @@ export function RelaysScreen({navigation}: RelaysScreenProps): React.JSX.Element
         <Button label={t('relays.add')} variant="secondary" onPress={onAdd} />
 
         {localError ? (
-          <Text
-            style={{
-              color: theme.colors.state.error,
-              fontSize: theme.typography.caption.fontSize,
-            }}>
-            {localError}
-          </Text>
+          <ErrorState title={t('relays.errorTitle')} message={localError} />
         ) : null}
-
-        <Button
-          label={t('relays.savePublish')}
-          loading={updateRelayList.isPending}
-          onPress={() => {
-            void onSave();
-          }}
-        />
       </ScrollView>
-    </View>
+    </KeyboardScreen>
   );
 }
 
@@ -316,30 +275,139 @@ function FlagToggle(props: {
   readonly onPress: () => void;
 }): React.JSX.Element {
   const theme = useTheme();
+  const styles = useMemo(() => createFlagStyles(theme), [theme]);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{selected: props.active}}
       onPress={props.onPress}
-      style={({pressed}) => ({
-        paddingVertical: theme.spacing.xs,
-        paddingHorizontal: theme.spacing.sm,
-        borderWidth: 1,
-        borderColor: props.active ? theme.colors.accent.primary : theme.colors.border.default,
-        borderRadius: theme.radius.sm,
-        backgroundColor: props.active
-          ? theme.colors.background.secondary
-          : theme.colors.background.primary,
-        opacity: pressed ? 0.85 : 1,
-      })}>
-      <Text
-        style={{
-          color: props.active ? theme.colors.accent.primary : theme.colors.text.primary,
-          fontSize: theme.typography.caption.fontSize,
-          fontWeight: '600',
-        }}>
+      style={({pressed}) => [
+        styles.flag,
+        props.active ? styles.flagActive : styles.flagInactive,
+        pressed ? styles.pressed : null,
+      ]}>
+      <Text style={[styles.flagLabel, props.active ? styles.flagLabelActive : null]}>
         {props.label}
       </Text>
     </Pressable>
   );
+}
+
+function createStyles(theme: Theme, insetBottom: number) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+    },
+    scroll: {
+      flex: 1,
+    },
+    rootEmpty: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.screenEdge,
+    },
+    loadingBlock: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    errorBlock: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.lg,
+    },
+    content: {
+      paddingHorizontal: theme.spacing.screenEdge,
+      paddingTop: theme.spacing.md,
+      paddingBottom: insetBottom + theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    body: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.caption.fontSize,
+      lineHeight: theme.typography.caption.lineHeight,
+    },
+    card: {
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      borderRadius: theme.radius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.border.default,
+      backgroundColor: theme.colors.background.elevated,
+      ...theme.elevation.card,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    cardUrl: {
+      flex: 1,
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.body.fontSize,
+      fontWeight: '600',
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: theme.radius.full,
+    },
+    statusLabel: {
+      fontSize: theme.typography.caption.fontSize,
+      fontWeight: '600',
+    },
+    flagsRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      alignItems: 'center',
+    },
+    removeButton: {
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    removeLabel: {
+      color: theme.colors.state.error,
+      fontSize: theme.typography.caption.fontSize,
+      fontWeight: '600',
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
+}
+
+function createFlagStyles(theme: Theme) {
+  return StyleSheet.create({
+    flag: {
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: theme.radius.sm,
+    },
+    flagActive: {
+      borderColor: theme.colors.accent.primary,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    flagInactive: {
+      borderColor: theme.colors.border.default,
+      backgroundColor: theme.colors.background.primary,
+    },
+    flagLabel: {
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.caption.fontSize,
+      fontWeight: '600',
+    },
+    flagLabelActive: {
+      color: theme.colors.accent.primary,
+    },
+    pressed: {
+      opacity: 0.85,
+    },
+  });
 }

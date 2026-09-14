@@ -9,7 +9,7 @@ import {WelcomeScreen} from './WelcomeScreen';
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 describe('WelcomeScreen', () => {
-  it('renders Still branding and auth actions', () => {
+  it('renders Still branding and onboarding actions', () => {
     render(
       <AppProviders scheme="dark">
         <NavigationContainer>
@@ -21,12 +21,11 @@ describe('WelcomeScreen', () => {
     );
 
     expect(screen.getByLabelText('Still')).toBeTruthy();
-    expect(screen.getByText('Yeni kimlik oluştur')).toBeTruthy();
-    expect(screen.getByText('Gizli anahtar ile giriş')).toBeTruthy();
-    expect(screen.getByText('Uzak imzalayıcı bağla')).toBeTruthy();
+    expect(screen.getByText('Devam et')).toBeTruthy();
+    expect(screen.getByText('Giriş yap')).toBeTruthy();
   });
 
-  it('navigates to CreateIdentity when primary action is pressed', () => {
+  it('navigates to CreateIdentity when skip is pressed', () => {
     const onCreateIdentity = jest.fn();
 
     function CreateIdentityStub(): React.JSX.Element {
@@ -45,7 +44,7 @@ describe('WelcomeScreen', () => {
       </AppProviders>,
     );
 
-    fireEvent.press(screen.getByText('Yeni kimlik oluştur'));
+    fireEvent.press(screen.getByLabelText('Atla'));
     expect(onCreateIdentity).toHaveBeenCalled();
   });
 });

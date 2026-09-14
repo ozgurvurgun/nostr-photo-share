@@ -99,6 +99,7 @@ export type AppContainer = {
   readonly authRuntime: AuthRuntime;
   readonly identityStore: IIdentitySessionStore;
   readonly nip19: INip19Codec;
+  readonly keyGenerator: IKeyGenerator;
   readonly createIdentity: CreateIdentityUseCase;
   readonly importNsec: ImportNsecUseCase;
   readonly connectBunker: ConnectBunkerUseCase;
@@ -437,6 +438,7 @@ export function createContainer(options: CreateContainerOptions = {}): AppContai
     authRuntime,
     identityStore,
     nip19,
+    keyGenerator,
     createIdentity,
     importNsec,
     connectBunker,

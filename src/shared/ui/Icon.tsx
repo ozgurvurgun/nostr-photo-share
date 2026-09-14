@@ -5,6 +5,7 @@ import {useTheme} from '../theme/ThemeProvider';
 export type IconName =
   | 'home'
   | 'search'
+  | 'compass'
   | 'plus'
   | 'user'
   | 'heart'
@@ -19,7 +20,20 @@ export type IconName =
   | 'help'
   | 'share'
   | 'bookmark'
-  | 'bookmarkFill';
+  | 'bookmarkFill'
+  | 'ellipsis'
+  | 'sparkle'
+  | 'message'
+  | 'bell'
+  | 'chevronRight'
+  | 'key'
+  | 'check'
+  | 'camera'
+  | 'copy'
+  | 'eye'
+  | 'eyeOff'
+  | 'grid'
+  | 'logout';
 
 export type IconProps = {
   readonly name: IconName;
@@ -73,6 +87,18 @@ export function Icon({
             stroke={stroke}
             strokeWidth={1.75}
             strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'compass':
+      return (
+        <Svg {...common}>
+          <Circle cx={12} cy={12} r={8.25} stroke={stroke} strokeWidth={1.75} />
+          <Path
+            d="m14.9 9.1-1.4 4.4-4.4 1.4 1.4-4.4 4.4-1.4Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
           />
         </Svg>
       );
@@ -274,6 +300,198 @@ export function Icon({
             fill={stroke}
             stroke={stroke}
             strokeWidth={1.25}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'ellipsis':
+      return (
+        <Svg {...common}>
+          <Circle cx={6} cy={12} r={1.45} fill={stroke} />
+          <Circle cx={12} cy={12} r={1.45} fill={stroke} />
+          <Circle cx={18} cy={12} r={1.45} fill={stroke} />
+        </Svg>
+      );
+    case 'sparkle':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M12 3.5 13.4 9 19 10.5 13.4 12 12 17.5 10.6 12 5 10.5 10.6 9 12 3.5Z"
+            stroke={stroke}
+            strokeWidth={1.5}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M18.2 15.2 18.8 17.2 20.8 17.8 18.8 18.4 18.2 20.4 17.6 18.4 15.6 17.8 17.6 17.2 18.2 15.2Z"
+            stroke={stroke}
+            strokeWidth={1.35}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'message':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M4.5 6.2h10A1.8 1.8 0 0 1 16.3 8v5.2a1.8 1.8 0 0 1-1.8 1.8H8.2L4.7 17.8V15H4.5A1.8 1.8 0 0 1 2.7 13.2V8A1.8 1.8 0 0 1 4.5 6.2Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M16.2 9.4h3.3A1.6 1.6 0 0 1 21.1 11v4.6a1.6 1.6 0 0 1-1.6 1.6H19v2.2l-2.8-2.2"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'bell':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M6.2 16.5h11.6M8 16.5V10.2a4 4 0 1 1 8 0v6.3"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M10 16.5a2 2 0 0 0 4 0"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M12 4.2v1.4"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'chevronRight':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M9.5 5.5 16 12l-6.5 6.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'key':
+      return (
+        <Svg {...common}>
+          <Circle cx={8.5} cy={12} r={3.25} stroke={stroke} strokeWidth={1.75} />
+          <Path
+            d="M11.5 12h8v2.4M16.5 12v2.4"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'check':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M5.5 12.5 10 17l8.5-9.5"
+            stroke={stroke}
+            strokeWidth={1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'camera':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M8.2 7.5 9.4 5.8h5.2l1.2 1.7H18a1.7 1.7 0 0 1 1.7 1.7v8A1.7 1.7 0 0 1 18 19H6a1.7 1.7 0 0 1-1.7-1.7v-8A1.7 1.7 0 0 1 6 7.5h2.2Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Circle cx={12} cy={13.2} r={2.6} stroke={stroke} strokeWidth={1.75} />
+        </Svg>
+      );
+    case 'copy':
+      return (
+        <Svg {...common}>
+          <Rect
+            x={8}
+            y={8}
+            width={10.5}
+            height={12}
+            rx={1.6}
+            stroke={stroke}
+            strokeWidth={1.75}
+          />
+          <Path
+            d="M6 15.5V5.8A1.8 1.8 0 0 1 7.8 4h8.4"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'eye':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M3.5 12s3.2-5.5 8.5-5.5S20.5 12 20.5 12s-3.2 5.5-8.5 5.5S3.5 12 3.5 12Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Circle cx={12} cy={12} r={2.4} stroke={stroke} strokeWidth={1.75} />
+        </Svg>
+      );
+    case 'eyeOff':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M4 5.5 19.5 19"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M9.2 8.4A7.4 7.4 0 0 1 12 6.5c5.3 0 8.5 5.5 8.5 5.5a14 14 0 0 1-3.2 3.6M7.1 9.8C4.8 11.2 3.5 12 3.5 12S6.7 17.5 12 17.5c1.1 0 2.1-.2 3-.6"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'grid':
+      return (
+        <Svg {...common}>
+          <Rect x={4} y={4} width={6} height={6} rx={1} stroke={stroke} strokeWidth={1.75} />
+          <Rect x={14} y={4} width={6} height={6} rx={1} stroke={stroke} strokeWidth={1.75} />
+          <Rect x={4} y={14} width={6} height={6} rx={1} stroke={stroke} strokeWidth={1.75} />
+          <Rect x={14} y={14} width={6} height={6} rx={1} stroke={stroke} strokeWidth={1.75} />
+        </Svg>
+      );
+    case 'logout':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M10 5.5H7.2A1.7 1.7 0 0 0 5.5 7.2v9.6A1.7 1.7 0 0 0 7.2 18.5H10"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M10 12h8.5M15.8 8.8 19.2 12l-3.4 3.2"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
             strokeLinejoin="round"
           />
         </Svg>

@@ -22,6 +22,7 @@ export type ScreenHeaderProps = {
   readonly backIcon?: Extract<IconName, 'chevronLeft' | 'close'>;
   readonly backAccessibilityLabel?: string;
   readonly rightLabel?: string;
+  readonly rightIcon?: IconName;
   readonly onRightPress?: () => void;
   readonly rightDisabled?: boolean;
   readonly rightLoading?: boolean;
@@ -39,6 +40,7 @@ export function ScreenHeader({
   backIcon = 'chevronLeft',
   backAccessibilityLabel,
   rightLabel,
+  rightIcon,
   onRightPress,
   rightDisabled = false,
   rightLoading = false,
@@ -47,7 +49,7 @@ export function ScreenHeader({
 }: ScreenHeaderProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const canRight = Boolean(rightLabel && onRightPress);
+  const canRight = Boolean(onRightPress && (rightLabel || rightIcon));
   const styles = useMemo(
     () => createStyles(theme, includeSafeArea ? insets.top : 0, border),
     [theme, includeSafeArea, insets.top, border],
@@ -98,7 +100,7 @@ export function ScreenHeader({
         {canRight ? (
           <AnimatedPressable
             accessibilityRole="button"
-            accessibilityLabel={rightLabel}
+            accessibilityLabel={rightLabel ?? backAccessibilityLabel}
             disabled={rightDisabled || rightLoading}
             onPress={() => {
               StillHaptics.selection();
@@ -121,9 +123,13 @@ export function ScreenHeader({
               rightDisabled || rightLoading ? styles.disabled : null,
               rightStyle,
             ]}>
-            <Text style={styles.rightLabel}>
-              {rightLoading ? t('common.loading') : rightLabel}
-            </Text>
+            {rightIcon ? (
+              <Icon name={rightIcon} size={22} color={theme.colors.accent.primary} />
+            ) : (
+              <Text style={styles.rightLabel}>
+                {rightLoading ? t('common.loading') : rightLabel}
+              </Text>
+            )}
           </AnimatedPressable>
         ) : (
           <View style={styles.side} />

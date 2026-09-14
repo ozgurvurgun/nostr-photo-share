@@ -1,4 +1,5 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {useMemo} from 'react';
 import {useAppContainer} from '../../../../app/providers/AppContainerContext';
 import type {PublishStoryInput} from '../../application/PublishStoryUseCase';
 import {
@@ -83,7 +84,7 @@ export function usePublishStory() {
       return result.value;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({queryKey: storyQueryKeyRoot});
+      queryClient.invalidateQueries({queryKey: storyQueryKeyRoot}).catch(() => undefined);
     },
   });
 }
@@ -95,7 +96,10 @@ export function useStorySeenIds(): ReadonlySet<string> {
     queryFn: (): string[] => [...container.storySeenStore.getSeenIds()],
     staleTime: Infinity,
   });
-  return new Set(query.data ?? [...container.storySeenStore.getSeenIds()]);
+  return useMemo(() => {
+    const ids = query.data ?? [...container.storySeenStore.getSeenIds()];
+    return new Set(ids);
+  }, [container.storySeenStore, query.data]);
 }
 
 export function useMarkStorySeen() {

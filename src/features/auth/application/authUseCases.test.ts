@@ -109,6 +109,23 @@ describe('CreateIdentityUseCase', () => {
     const secret = await harness.store.loadSecretKeyHex();
     expect(secret.ok && secret.value !== null && secret.value.length === 64).toBe(true);
   });
+
+  it('persists a caller-supplied secret instead of generating a new one', async () => {
+    const harness = createHarness();
+    const secret = hexToBytes(NIP19_NSEC_HEX);
+    const result = await harness.createIdentity.execute(secret);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.authMethod).toBe('generated');
+    expect(result.value.publicKey.toHex()).toBe(
+      harness.keyGenerator.getPublicKeyHex(hexToBytes(NIP19_NSEC_HEX)),
+    );
+    const stored = await harness.store.loadSecretKeyHex();
+    expect(stored.ok && stored.value).toBe(NIP19_NSEC_HEX);
+  });
 });
 
 describe('ImportNsecUseCase', () => {

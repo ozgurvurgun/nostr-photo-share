@@ -6,6 +6,8 @@ import {profileQueryKey} from '../profileQueryKeys';
 export function useProfile(pubkeyHex: string | undefined) {
   const container = useAppContainer();
   const normalized = pubkeyHex?.trim().toLowerCase() ?? '';
+  const cached =
+    normalized.length > 0 ? container.getProfile.getCached(normalized) : null;
 
   return useQuery({
     queryKey: profileQueryKey(normalized),
@@ -13,15 +15,17 @@ export function useProfile(pubkeyHex: string | undefined) {
     queryFn: async (): Promise<Profile> => {
       const result = await container.getProfile.execute(normalized);
       if (!result.ok) {
-        const cached = container.getProfile.getCached(normalized);
-        if (cached !== null) {
-          return cached;
+        const fallback = container.getProfile.getCached(normalized);
+        if (fallback !== null) {
+          return fallback;
         }
         throw result.error;
       }
       return result.value;
     },
-    staleTime: 30_000,
+    initialData: cached ?? undefined,
+    staleTime: 120_000,
+    gcTime: 10 * 60_000,
   });
 }
 
@@ -39,7 +43,9 @@ export function useUpdateProfile() {
     },
     onSuccess: profile => {
       queryClient.setQueryData(profileQueryKey(profile.pubkeyHex), profile);
-      void queryClient.invalidateQueries({queryKey: profileQueryKey(profile.pubkeyHex)});
+      queryClient
+        .invalidateQueries({queryKey: profileQueryKey(profile.pubkeyHex)})
+        .catch(() => undefined);
     },
   });
 }
