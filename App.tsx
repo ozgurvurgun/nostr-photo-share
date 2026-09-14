@@ -19,6 +19,15 @@ function BootstrapLoading(): React.JSX.Element {
   );
 }
 
+function ThemedStatusBar(): React.JSX.Element {
+  const theme = useTheme();
+  return (
+    <StatusBar
+      barStyle={theme.scheme === 'light' ? 'dark-content' : 'light-content'}
+    />
+  );
+}
+
 function App(): React.JSX.Element {
   const [container, setContainer] = useState<AppContainer | null>(null);
 
@@ -36,16 +45,16 @@ function App(): React.JSX.Element {
 
   if (container === null) {
     return (
-      <AppProviders scheme="dark">
-        <StatusBar barStyle="light-content" />
+      <AppProviders>
+        <ThemedStatusBar />
         <BootstrapLoading />
       </AppProviders>
     );
   }
 
   return (
-    <AppProviders scheme="dark" container={container}>
-      <StatusBar barStyle="light-content" />
+    <AppProviders container={container}>
+      <ThemedStatusBar />
       <RootNavigator />
     </AppProviders>
   );

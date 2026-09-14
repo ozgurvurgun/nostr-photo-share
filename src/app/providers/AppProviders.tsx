@@ -5,6 +5,8 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {AuthSessionProvider} from '../../features/auth/presentation/hooks/useAuthSession';
 import {ThemeProvider} from '../../shared/theme/ThemeProvider';
+import {LocaleProvider, LocaleTree} from '../../shared/i18n/LocaleProvider';
+import {ToastProvider} from '../../shared/ui/Toast';
 import type {AppContainer} from '../di/container';
 import {AppContainerProvider} from './AppContainerContext';
 
@@ -54,7 +56,13 @@ export function AppProviders({
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider initialMetrics={initialSafeAreaMetrics}>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider scheme={scheme}>{content}</ThemeProvider>
+          <ThemeProvider scheme={scheme}>
+            <LocaleProvider>
+              <ToastProvider>
+                <LocaleTree>{content}</LocaleTree>
+              </ToastProvider>
+            </LocaleProvider>
+          </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

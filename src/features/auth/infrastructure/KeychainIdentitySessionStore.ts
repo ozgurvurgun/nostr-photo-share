@@ -57,10 +57,25 @@ export class KeychainIdentitySessionStore implements IIdentitySessionStore {
       return ok(this.unlockedSecretHex);
     }
 
+    return this.readSecretFromKeychain('Kimliğini doğrula');
+  }
+
+  async unlockSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>> {
+    // Export / reveal must never use the in-memory session cache.
+    return this.readSecretFromKeychain('Recovery key için doğrula');
+  }
+
+  private async readSecretFromKeychain(
+    subtitle: string,
+  ): Promise<Result<string | null, IdentityStorageError>> {
     try {
       const credentials = await Keychain.getGenericPassword({
         service: SECRET_SERVICE,
-        authenticationPrompt: SECRET_KEYCHAIN_OPTIONS.authenticationPrompt,
+        accessControl: SECRET_KEYCHAIN_OPTIONS.accessControl,
+        authenticationPrompt: {
+          ...SECRET_KEYCHAIN_OPTIONS.authenticationPrompt,
+          subtitle,
+        },
       });
       if (credentials === false) {
         return ok(null);

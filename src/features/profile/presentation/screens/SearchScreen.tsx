@@ -9,7 +9,6 @@ import {StillHaptics} from '../../../../shared/haptics/haptics';
 import {t} from '../../../../shared/i18n';
 import {useTheme} from '../../../../shared/theme/ThemeProvider';
 import type {Theme} from '../../../../shared/theme/types';
-import {Icon} from '../../../../shared/ui/Icon';
 import {SearchBar} from '../../../../shared/ui/SearchBar';
 import type {ImagePost} from '../../../feed/domain/ImagePost';
 import {PostGrid} from '../../../feed/presentation/components/PostGrid';
@@ -132,19 +131,9 @@ export function SearchScreen({navigation, route}: SearchScreenProps): React.JSX.
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text accessibilityRole="header" style={styles.title}>
-            {t('search.title')}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('search.settingsA11y')}
-            onPress={() => navigation.navigate('Account')}
-            hitSlop={theme.layout.hitSlop}
-            style={({pressed}) => (pressed ? styles.pressed : null)}>
-            <Icon name="settings" size={22} color={theme.colors.text.secondary} />
-          </Pressable>
-        </View>
+        <Text accessibilityRole="header" style={styles.title}>
+          {t('search.title')}
+        </Text>
         <SearchBar
           value={query}
           onChangeText={setQuery}
@@ -189,17 +178,12 @@ function createStyles(theme: Theme, insetTop: number) {
       paddingBottom: theme.spacing.sm,
       gap: theme.spacing.sm,
     },
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
     title: {
       color: theme.colors.text.primary,
-      fontSize: theme.typography.display.fontSize,
-      lineHeight: theme.typography.display.lineHeight,
-      fontWeight: theme.typography.display.fontWeight,
-      letterSpacing: theme.typography.display.letterSpacing,
+      fontSize: theme.typography.title.fontSize,
+      lineHeight: theme.typography.title.lineHeight,
+      fontWeight: theme.typography.title.fontWeight,
+      letterSpacing: theme.typography.title.letterSpacing,
     },
     chips: {
       paddingHorizontal: theme.spacing.screenEdge,
@@ -227,9 +211,6 @@ function createStyles(theme: Theme, insetTop: number) {
     },
     chipLabelOn: {
       color: theme.colors.accent.onAccent,
-    },
-    pressed: {
-      opacity: 0.7,
     },
   });
 }

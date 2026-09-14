@@ -22,6 +22,7 @@ import {CachedImage} from '../../../../shared/ui/CachedImage';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
 import {Icon} from '../../../../shared/ui/Icon';
 import {KeyboardScreen} from '../../../../shared/ui/KeyboardScreen';
+import {useToast} from '../../../../shared/ui/Toast';
 import type {SelectedImage} from '../../../media-upload/domain/ImageAttachment';
 import {useImageUpload} from '../../../media-upload/presentation/hooks/useImageUpload';
 import {normalizeRelayUrl} from '../../../relays/domain/RelayUrl';
@@ -83,6 +84,7 @@ export function CreateIdentityScreen({
   const container = useAppContainer();
   const {completeLogin} = useAuthSession();
   const upload = useImageUpload();
+  const toast = useToast();
 
   const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
@@ -236,6 +238,10 @@ export function CreateIdentityScreen({
         setError(t('createIdentity.needName'));
         return;
       }
+      if (username.trim().length === 0) {
+        setError(t('createIdentity.needUsername'));
+        return;
+      }
       setStep(2);
       return;
     }
@@ -309,7 +315,9 @@ export function CreateIdentityScreen({
     StillHaptics.selection();
     const ok = nsec.length > 0 && copyToClipboard(nsec);
     setCopied(ok);
-    if (!ok) {
+    if (ok) {
+      toast.show(t('common.copied'), {tone: 'success'});
+    } else {
       setRevealed(true);
     }
   }
@@ -329,6 +337,19 @@ export function CreateIdentityScreen({
       : step === 5
         ? t('createIdentity.goFeed')
         : t('createIdentity.continue');
+
+  const ctaDisabled = useMemo(() => {
+    if (step === 1) {
+      return displayName.trim().length === 0 || username.trim().length === 0;
+    }
+    if (step === 3) {
+      return !backupOk;
+    }
+    if (step === 4) {
+      return selectedRelays.size === 0 && customRelay.trim().length === 0;
+    }
+    return false;
+  }, [backupOk, customRelay, displayName, selectedRelays, step, username]);
 
   return (
     <KeyboardScreen style={styles.root}>
@@ -368,7 +389,7 @@ export function CreateIdentityScreen({
             <TextInput
               value={displayName}
               onChangeText={onChangeDisplayName}
-              placeholder="Özgür Vurgun"
+              placeholder={t('createIdentity.displayNamePlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               style={styles.input}
             />
@@ -381,7 +402,7 @@ export function CreateIdentityScreen({
               }}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="ozgurv"
+              placeholder={t('createIdentity.usernamePlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               style={styles.input}
             />
@@ -516,6 +537,12 @@ export function CreateIdentityScreen({
                 <Text style={styles.backupHint}>{t('createIdentity.confirmBackupHint')}</Text>
               </View>
             </Pressable>
+            <View style={styles.passcodeNote}>
+              <Icon name="lock" size={14} color={theme.colors.accent.primary} />
+              <Text style={styles.passcodeNoteText}>
+                {t('createIdentity.passcodeNextHint')}
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -614,6 +641,7 @@ export function CreateIdentityScreen({
         <AuthCtaButton
           label={ctaLabel}
           loading={loading}
+          disabled={ctaDisabled}
           onPress={() => {
             if (step === 5) {
               onFinish().catch(() => undefined);
@@ -655,10 +683,10 @@ function createStyles(theme: Theme, insetBottom: number) {
     },
     title: {
       color: theme.colors.text.primary,
-      fontSize: 32,
-      lineHeight: 38,
+      fontSize: 24,
+      lineHeight: 30,
       fontWeight: '700',
-      letterSpacing: -0.4,
+      letterSpacing: -0.3,
     },
     body: {
       color: theme.colors.text.secondary,
@@ -972,6 +1000,22 @@ function createStyles(theme: Theme, insetBottom: number) {
       color: theme.colors.text.disabled,
       fontSize: theme.typography.caption.fontSize,
       textAlign: 'center',
+    },
+    passcodeNote: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: theme.spacing.xs,
+      alignSelf: 'stretch',
+      marginTop: theme.spacing.xs,
+      paddingTop: theme.spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.colors.border.subtle,
+    },
+    passcodeNoteText: {
+      flex: 1,
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.timestamp.fontSize,
+      lineHeight: theme.typography.timestamp.lineHeight + 2,
     },
     pressed: {
       opacity: 0.75,

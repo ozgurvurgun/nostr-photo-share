@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +15,12 @@ import {Icon, type IconName} from './Icon';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const DISPLAY_FONT = Platform.select({
+  ios: 'Georgia',
+  android: 'serif',
+  default: 'serif',
+});
+
 export type ScreenHeaderProps = {
   readonly title: string;
   readonly onBack?: () => void;
@@ -29,6 +35,8 @@ export type ScreenHeaderProps = {
   /** When false, safe-area top padding is omitted (parent already applied it). */
   readonly includeSafeArea?: boolean;
   readonly border?: boolean;
+  /** Serif display title used on settings / mock-aligned screens. */
+  readonly displayTitle?: boolean;
 };
 
 /**
@@ -46,13 +54,14 @@ export function ScreenHeader({
   rightLoading = false,
   includeSafeArea = true,
   border = true,
+  displayTitle = false,
 }: ScreenHeaderProps): React.JSX.Element {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const canRight = Boolean(onRightPress && (rightLabel || rightIcon));
   const styles = useMemo(
-    () => createStyles(theme, includeSafeArea ? insets.top : 0, border),
-    [theme, includeSafeArea, insets.top, border],
+    () => createStyles(theme, includeSafeArea ? insets.top : 0, border, displayTitle),
+    [theme, includeSafeArea, insets.top, border, displayTitle],
   );
   const backScale = useSharedValue(1);
   const rightScale = useSharedValue(1);
@@ -124,7 +133,7 @@ export function ScreenHeader({
               rightStyle,
             ]}>
             {rightIcon ? (
-              <Icon name={rightIcon} size={22} color={theme.colors.accent.primary} />
+              <Icon name={rightIcon} size={22} color={theme.colors.text.primary} />
             ) : (
               <Text style={styles.rightLabel}>
                 {rightLoading ? t('common.loading') : rightLabel}
@@ -139,12 +148,17 @@ export function ScreenHeader({
   );
 }
 
-function createStyles(theme: Theme, paddingTop: number, border: boolean) {
+function createStyles(
+  theme: Theme,
+  paddingTop: number,
+  border: boolean,
+  displayTitle: boolean,
+) {
   return StyleSheet.create({
     root: {
       paddingTop,
       backgroundColor: theme.colors.background.primary,
-      borderBottomWidth: border ? 1 : 0,
+      borderBottomWidth: border ? StyleSheet.hairlineWidth : 0,
       borderBottomColor: theme.colors.border.default,
     },
     row: {
@@ -169,9 +183,10 @@ function createStyles(theme: Theme, paddingTop: number, border: boolean) {
       flex: 1,
       textAlign: 'center',
       color: theme.colors.text.primary,
-      fontSize: theme.typography.heading.fontSize,
-      lineHeight: theme.typography.heading.lineHeight,
-      fontWeight: theme.typography.heading.fontWeight,
+      fontSize: displayTitle ? 18 : theme.typography.heading.fontSize,
+      lineHeight: displayTitle ? 24 : theme.typography.heading.lineHeight,
+      fontWeight: displayTitle ? '600' : theme.typography.heading.fontWeight,
+      fontFamily: displayTitle ? DISPLAY_FONT : undefined,
     },
     rightLabel: {
       color: theme.colors.accent.primary,

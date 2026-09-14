@@ -81,6 +81,7 @@ describe('KeychainIdentitySessionStore', () => {
     expect(Keychain.getGenericPassword).toHaveBeenCalledWith(
       expect.objectContaining({
         service: 'com.still.app.identity.secretKey',
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
         authenticationPrompt: expect.objectContaining({
           subtitle: 'Kimliğini doğrula',
         }),
@@ -94,6 +95,32 @@ describe('KeychainIdentitySessionStore', () => {
     }
     expect(second.value).toBe(secret);
     expect(Keychain.getGenericPassword).toHaveBeenCalledTimes(1);
+  });
+
+  it('unlockSecretKeyHex always re-prompts Keychain and ignores session cache', async () => {
+    const store = new KeychainIdentitySessionStore();
+    const secret = 'e'.repeat(64);
+    await store.saveSecretKeyHex(secret);
+    (Keychain.getGenericPassword as jest.Mock).mockClear();
+    (Keychain.getGenericPassword as jest.Mock).mockResolvedValue({
+      service: 'com.still.app.identity.secretKey',
+      username: 'identity.secretKey',
+      password: secret,
+      storage: 'mock',
+    });
+
+    const unlocked = await store.unlockSecretKeyHex();
+    expect(unlocked.ok).toBe(true);
+    expect(Keychain.getGenericPassword).toHaveBeenCalledTimes(1);
+    expect(Keychain.getGenericPassword).toHaveBeenCalledWith(
+      expect.objectContaining({
+        service: 'com.still.app.identity.secretKey',
+        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        authenticationPrompt: expect.objectContaining({
+          subtitle: 'Recovery key için doğrula',
+        }),
+      }),
+    );
   });
 
   it('wipes the unlocked secret cache on clear', async () => {

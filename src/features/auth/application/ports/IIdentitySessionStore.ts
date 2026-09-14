@@ -17,6 +17,11 @@ export type StoredSession = {
 export interface IIdentitySessionStore {
   saveSecretKeyHex(hex: string): Promise<Result<void, IdentityStorageError>>;
   loadSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>>;
+  /**
+   * Always re-prompts device biometrics / passcode.
+   * Use for revealing or exporting the secret — never the session cache.
+   */
+  unlockSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>>;
   saveSession(session: StoredSession): Promise<Result<void, IdentityStorageError>>;
   loadSession(): Promise<Result<StoredSession | null, IdentityStorageError>>;
   clear(): Promise<Result<void, IdentityStorageError>>;

@@ -185,8 +185,8 @@ function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
     },
     brand: {
       color: '#F4F0E6',
-      fontSize: 28,
-      lineHeight: 34,
+      fontSize: 22,
+      lineHeight: 28,
       fontWeight: '700',
       fontStyle: 'italic',
     },
@@ -215,15 +215,15 @@ function createStyles(theme: Theme, insetTop: number, insetBottom: number) {
     },
     title: {
       color: '#F4F0E6',
-      fontSize: 36,
-      lineHeight: 42,
+      fontSize: 28,
+      lineHeight: 34,
       fontWeight: '700',
-      letterSpacing: -0.6,
+      letterSpacing: -0.4,
     },
     body: {
       color: 'rgba(244,240,230,0.82)',
       fontSize: theme.typography.body.fontSize,
-      lineHeight: 22,
+      lineHeight: theme.typography.body.lineHeight,
     },
     dots: {
       flexDirection: 'row',

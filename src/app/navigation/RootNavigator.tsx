@@ -9,6 +9,7 @@ import {ConnectBunkerScreen} from '../../features/auth/presentation/screens/Conn
 import {CreateIdentityScreen} from '../../features/auth/presentation/screens/CreateIdentityScreen';
 import {AccountScreen} from '../../features/auth/presentation/screens/AccountScreen';
 import {ImportNsecScreen} from '../../features/auth/presentation/screens/ImportNsecScreen';
+import {SecurityScreen} from '../../features/auth/presentation/screens/SecurityScreen';
 import {WelcomeScreen} from '../../features/auth/presentation/screens/WelcomeScreen';
 import {CreatePostScreen} from '../../features/feed/presentation/screens/CreatePostScreen';
 import {MediaUploadScreen} from '../../features/media-upload/presentation/screens/MediaUploadScreen';
@@ -54,6 +55,7 @@ function AppNavigator(): React.JSX.Element {
       <AppStack.Screen name="CreateStory" component={CreateStoryScreen} />
       <AppStack.Screen name="StoryViewer" component={StoryViewerScreen} />
       <AppStack.Screen name="Account" component={AccountScreen} />
+      <AppStack.Screen name="Security" component={SecurityScreen} />
       <AppStack.Screen name="Profile" component={ProfileScreen} />
       <AppStack.Screen name="EditProfile" component={EditProfileScreen} />
       <AppStack.Screen name="MediaUpload" component={MediaUploadScreen} />

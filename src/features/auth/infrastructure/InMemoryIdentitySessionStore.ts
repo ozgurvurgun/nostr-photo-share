@@ -18,6 +18,10 @@ export class InMemoryIdentitySessionStore implements IIdentitySessionStore {
     return ok(this.secretKeyHex);
   }
 
+  async unlockSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>> {
+    return ok(this.secretKeyHex);
+  }
+
   async saveSession(session: StoredSession): Promise<Result<void, IdentityStorageError>> {
     this.session = session;
     return ok(undefined);
@@ -43,6 +47,10 @@ export class FailingIdentitySessionStore implements IIdentitySessionStore {
   }
 
   async loadSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>> {
+    return err(new IdentityStorageError(this.message));
+  }
+
+  async unlockSecretKeyHex(): Promise<Result<string | null, IdentityStorageError>> {
     return err(new IdentityStorageError(this.message));
   }
 

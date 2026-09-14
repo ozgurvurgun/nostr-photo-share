@@ -1,5 +1,5 @@
 import React, {useMemo, useState} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import type {ImageStyle as FastImageStyle} from '@d11/react-native-fast-image';
 import {useQueryClient} from '@tanstack/react-query';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -7,15 +7,16 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useAppContainer} from '../../../../app/providers/AppContainerContext';
 import type {AppStackParamList} from '../../../../app/navigation/types';
 import {t} from '../../../../shared/i18n';
-import {useTheme} from '../../../../shared/theme/ThemeProvider';
+import {useLocale} from '../../../../shared/i18n/LocaleProvider';
+import {useTheme, useThemePreference} from '../../../../shared/theme/ThemeProvider';
 import type {Theme} from '../../../../shared/theme/types';
 import {CachedImage} from '../../../../shared/ui/CachedImage';
 import {EmptyState} from '../../../../shared/ui/EmptyState';
 import {ErrorState} from '../../../../shared/ui/ErrorState';
-import {HelpModal} from '../../../../shared/ui/HelpModal';
 import {Icon} from '../../../../shared/ui/Icon';
 import {ScreenHeader} from '../../../../shared/ui/ScreenHeader';
 import {SettingsRow} from '../../../../shared/ui/SettingsRow';
+import {useToast} from '../../../../shared/ui/Toast';
 import {feedQueryKeyRoot} from '../../../feed/presentation/feedQueryKeys';
 import {profileQueryKeyRoot} from '../../../profile/presentation/profileQueryKeys';
 import {useProfile} from '../../../profile/presentation/hooks/useProfile';
@@ -28,6 +29,9 @@ export type AccountScreenProps = NativeStackScreenProps<AppStackParamList, 'Acco
 
 export function AccountScreen({navigation}: AccountScreenProps): React.JSX.Element {
   const theme = useTheme();
+  const {scheme, setScheme} = useThemePreference();
+  const {locale, setLocale} = useLocale();
+  const toast = useToast();
   const insets = useSafeAreaInsets();
   const styles = useMemo(
     () => createStyles(theme, insets.bottom),
@@ -38,7 +42,6 @@ export function AccountScreen({navigation}: AccountScreenProps): React.JSX.Eleme
   const {identity, setIdentity} = useAuthSession();
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSecurity, setShowSecurity] = useState(false);
   const pubkeyHex = identity?.publicKey.toHex() ?? '';
   const profileQuery = useProfile(pubkeyHex.length > 0 ? pubkeyHex : undefined);
 
@@ -148,9 +151,61 @@ export function AccountScreen({navigation}: AccountScreenProps): React.JSX.Eleme
           <View style={styles.divider} />
           <SettingsRow
             accent
-            icon="key"
+            icon="lock"
             label={t('account.security')}
-            onPress={() => setShowSecurity(true)}
+            onPress={() => navigation.navigate('Security')}
+          />
+        </View>
+
+        <Text style={styles.section}>{t('account.appearance')}</Text>
+        <View style={styles.group}>
+          <SettingsRow
+            accent
+            icon="moon"
+            label={t('account.darkMode')}
+            detail={
+              scheme === 'dark'
+                ? t('account.darkModeOn')
+                : t('account.darkModeOff')
+            }
+            switchValue={scheme === 'dark'}
+            onSwitchChange={enabled => {
+              setScheme(enabled ? 'dark' : 'light');
+            }}
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            accent
+            icon="globe"
+            label={t('account.language')}
+            detail={
+              locale === 'tr' ? t('account.languageTr') : t('account.languageEn')
+            }
+            onPress={() => {
+              Alert.alert(t('account.languagePickerTitle'), undefined, [
+                {
+                  text: t('account.languageTr'),
+                  onPress: () => {
+                    if (locale !== 'tr') {
+                      const label = t('account.languageTr');
+                      setLocale('tr');
+                      toast.show(label, {tone: 'success'});
+                    }
+                  },
+                },
+                {
+                  text: t('account.languageEn'),
+                  onPress: () => {
+                    if (locale !== 'en') {
+                      const label = t('account.languageEn');
+                      setLocale('en');
+                      toast.show(label, {tone: 'success'});
+                    }
+                  },
+                },
+                {text: t('common.cancel'), style: 'cancel'},
+              ]);
+            }}
           />
         </View>
 
@@ -186,12 +241,6 @@ export function AccountScreen({navigation}: AccountScreenProps): React.JSX.Eleme
           </Text>
         </Pressable>
       </ScrollView>
-      <HelpModal
-        visible={showSecurity}
-        title={t('account.securityTitle')}
-        body={t('account.securityBody')}
-        onClose={() => setShowSecurity(false)}
-      />
     </View>
   );
 }

@@ -27,13 +27,22 @@ export type IconName =
   | 'bell'
   | 'chevronRight'
   | 'key'
+  | 'lock'
+  | 'bolt'
   | 'check'
   | 'camera'
   | 'copy'
   | 'eye'
   | 'eyeOff'
   | 'grid'
-  | 'logout';
+  | 'logout'
+  | 'arrowRight'
+  | 'music'
+  | 'draw'
+  | 'sticker'
+  | 'wand'
+  | 'moon'
+  | 'globe';
 
 export type IconProps = {
   readonly name: IconName;
@@ -395,6 +404,38 @@ export function Icon({
           />
         </Svg>
       );
+    case 'lock':
+      return (
+        <Svg {...common}>
+          <Rect
+            x={6}
+            y={11}
+            width={12}
+            height={9}
+            rx={2}
+            stroke={stroke}
+            strokeWidth={1.75}
+          />
+          <Path
+            d="M8.5 11V8.2a3.5 3.5 0 0 1 7 0V11"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'bolt':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M13.5 3.5 7 13h5l-1.5 7.5L17.5 11h-5L13.5 3.5Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
     case 'check':
       return (
         <Svg {...common}>
@@ -493,6 +534,120 @@ export function Icon({
             strokeWidth={1.75}
             strokeLinecap="round"
             strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'arrowRight':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M5 12h13M13.5 6.5 19 12l-5.5 5.5"
+            stroke={stroke}
+            strokeWidth={1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'music':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M9 18.5V7.2l10-1.7v11.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Circle cx={7} cy={18.5} r={2.4} stroke={stroke} strokeWidth={1.75} />
+          <Circle cx={17} cy={16.8} r={2.4} stroke={stroke} strokeWidth={1.75} />
+        </Svg>
+      );
+    case 'draw':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M14.5 5.2 18.8 9.5 9.2 19H4.8v-4.4L14.5 5.2Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M12.8 6.9 17.1 11.2"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'sticker':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M6 5.5h8.2L18.5 9.8V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18V7A1.5 1.5 0 0 1 6 5.5Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M14 5.8V9.5h3.7"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M8.2 13.2c.8 1.2 1.9 1.8 3.3 1.8s2.5-.6 3.3-1.8"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Circle cx={9.2} cy={11} r={0.9} fill={stroke} />
+          <Circle cx={13.8} cy={11} r={0.9} fill={stroke} />
+        </Svg>
+      );
+    case 'wand':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M5 19 14.5 9.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M15.2 5.2v2.4M13.2 6.4h4M17.8 8.8l1.5 1.5M17.8 11.8l1.5-1.5"
+            stroke={stroke}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M13.2 10.8 16.5 7.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case 'moon':
+      return (
+        <Svg {...common}>
+          <Path
+            d="M15.5 4.8A7.5 7.5 0 1 0 19.2 14 6.2 6.2 0 0 1 15.5 4.8Z"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'globe':
+      return (
+        <Svg {...common}>
+          <Circle cx={12} cy={12} r={8.25} stroke={stroke} strokeWidth={1.75} />
+          <Path
+            d="M3.75 12h16.5M12 3.75c2.4 2.6 2.4 13.9 0 16.5M12 3.75c-2.4 2.6-2.4 13.9 0 16.5"
+            stroke={stroke}
+            strokeWidth={1.75}
+            strokeLinecap="round"
           />
         </Svg>
       );

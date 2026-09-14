@@ -46,8 +46,8 @@ export function AuthWizardHeader({
         </Text>
         <View style={styles.sideEnd}>
           {step !== undefined && total !== undefined ? (
-            <Text style={styles.step}>
-              {t('createIdentity.stepOf', {current: step, total})}
+            <Text numberOfLines={1} style={styles.step}>
+              {`${step}/${total}`}
             </Text>
           ) : null}
         </View>
@@ -81,7 +81,7 @@ function createStyles(theme: Theme, paddingTop: number, progress: number) {
       justifyContent: 'center',
     },
     sideEnd: {
-      width: 48,
+      minWidth: theme.layout.headerControlSize,
       alignItems: 'flex-end',
       justifyContent: 'center',
     },
@@ -89,15 +89,17 @@ function createStyles(theme: Theme, paddingTop: number, progress: number) {
       flex: 1,
       textAlign: 'center',
       color: theme.colors.text.primary,
-      fontSize: 22,
-      lineHeight: 28,
+      fontSize: 18,
+      lineHeight: 24,
       fontWeight: '700',
       fontStyle: 'italic',
+      paddingHorizontal: theme.spacing.xs,
     },
     step: {
       color: theme.colors.accent.primary,
       fontSize: theme.typography.caption.fontSize,
       fontWeight: '700',
+      fontVariant: ['tabular-nums'],
     },
     track: {
       height: 3,

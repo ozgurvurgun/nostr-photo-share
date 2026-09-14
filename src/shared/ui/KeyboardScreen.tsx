@@ -29,8 +29,8 @@ export function KeyboardScreen({
 }: KeyboardScreenProps): React.JSX.Element {
   const keyboardInset = useKeyboardBottomInset();
   const insets = useSafeAreaInsets();
-  // Keyboard height is from the physical screen bottom; content already
-  // accounts for the nav-bar inset via safe-area padding on footers.
+  // Full overlap from screen bottom. Footers keep their own safe-area
+  // padding, so subtract it once to avoid double-spacing above the IME.
   const androidPad =
     keyboardInset > 0 ? Math.max(0, keyboardInset - insets.bottom) : 0;
 

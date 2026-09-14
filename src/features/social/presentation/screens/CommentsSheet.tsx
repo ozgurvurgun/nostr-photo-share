@@ -139,10 +139,13 @@ export function CommentsSheet({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const keyboardInset = useKeyboardBottomInset();
-  const keyboardLift =
-    keyboardInset > 0 ? Math.max(0, keyboardInset - insets.bottom) : 0;
+  // Modal sits on the physical screen bottom — do not subtract nav inset
+  // or the composer ends up partially under the IME (common edge-to-edge bug).
+  const keyboardLift = Platform.OS === 'android' ? keyboardInset : 0;
   const composerPad =
-    keyboardLift > 0 ? theme.spacing.sm : insets.bottom + theme.spacing.sm;
+    keyboardInset > 0
+      ? theme.spacing.sm
+      : insets.bottom + theme.spacing.sm;
   const styles = useMemo(
     () => createStyles(theme, composerPad),
     [theme, composerPad],
@@ -155,7 +158,8 @@ export function CommentsSheet({
       transparent
       animationType="slide"
       onRequestClose={onClose}
-      statusBarTranslucent>
+      statusBarTranslucent
+      navigationBarTranslucent>
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -169,9 +173,7 @@ export function CommentsSheet({
         <View
           style={[
             styles.sheet,
-            Platform.OS === 'android' && keyboardLift > 0
-              ? {marginBottom: keyboardLift}
-              : null,
+            keyboardLift > 0 ? {marginBottom: keyboardLift} : null,
           ]}>
           <View style={styles.handle} />
           <View style={styles.header}>

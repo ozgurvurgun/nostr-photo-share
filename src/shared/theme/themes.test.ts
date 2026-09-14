@@ -13,7 +13,7 @@ describe('design tokens', () => {
 
   it('uses the 8pt spacing grid and declared type scale', () => {
     expect(Object.values(darkTheme.spacing).every(value => value % 4 === 0)).toBe(true);
-    expect(darkTheme.typography.display.fontSize).toBe(32);
+    expect(darkTheme.typography.display.fontSize).toBe(26);
     expect(darkTheme.typography.body.lineHeight).toBe(22);
     expect(darkTheme.typography.button.fontWeight).toBe('600');
     expect(darkTheme.typography.username.fontSize).toBe(14);

@@ -26,6 +26,7 @@ export type AppStackParamList = {
     authorQueue?: string[];
   };
   Account: undefined;
+  Security: undefined;
   Profile: {pubkeyHex?: string} | undefined;
   EditProfile: {pictureUrl?: string} | undefined;
   MediaUpload: {purpose?: 'general' | 'avatar'} | undefined;

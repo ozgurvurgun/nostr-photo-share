@@ -197,10 +197,10 @@ function createStyles(theme: Theme, insetBottom: number) {
     },
     title: {
       color: theme.colors.text.primary,
-      fontSize: 36,
-      lineHeight: 42,
+      fontSize: 24,
+      lineHeight: 30,
       fontWeight: '700',
-      letterSpacing: -0.6,
+      letterSpacing: -0.3,
     },
     body: {
       color: theme.colors.text.secondary,

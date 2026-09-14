@@ -22,6 +22,7 @@ import {useTheme} from '../../../../shared/theme/ThemeProvider';
 import type {Theme} from '../../../../shared/theme/types';
 import {CachedImage} from '../../../../shared/ui/CachedImage';
 import {Icon} from '../../../../shared/ui/Icon';
+import {useToast} from '../../../../shared/ui/Toast';
 import type {ImageStyle as FastImageStyle} from '@d11/react-native-fast-image';
 import {useProfile} from '../../../profile/presentation/hooks/useProfile';
 import type {ImagePost} from '../../domain/ImagePost';
@@ -92,6 +93,7 @@ function FeedPostCardInner({
   onPostPress,
 }: FeedPostCardProps): React.JSX.Element {
   const theme = useTheme();
+  const toast = useToast();
   const styles = useMemo(() => createCardStyles(theme), [theme]);
   const [failed, setFailed] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -234,8 +236,14 @@ function FeedPostCardInner({
 
   const onToggleSave = useCallback(() => {
     StillHaptics.save();
-    setSaved(prev => !prev);
-  }, []);
+    setSaved(prev => {
+      const next = !prev;
+      if (next) {
+        toast.show(t('feed.saved'), {tone: 'success'});
+      }
+      return next;
+    });
+  }, [toast]);
 
   const onOpenMore = useCallback(() => {
     StillHaptics.selection();
@@ -599,6 +607,8 @@ function createCardStyles(theme: Theme) {
       paddingBottom: theme.spacing.md,
       gap: theme.spacing.sm,
       backgroundColor: theme.colors.background.primary,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border.default,
     },
     detailPad: {
       paddingHorizontal: theme.spacing.screenEdge,

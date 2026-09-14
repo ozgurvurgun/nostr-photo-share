@@ -1,5 +1,5 @@
 /**
- * Turkish UI copy for Still (tr-TR). English can be added later as another locale file.
+ * Turkish UI copy for Still (tr-TR).
  */
 export const tr = {
   brand: 'Still',
@@ -19,13 +19,15 @@ export const tr = {
     helpA11y: '{{topic}} hakkında bilgi',
     stepOf: 'Adım {{current}} / {{total}}',
     uploadingPercent: 'Yükleniyor... {{percent}}%',
+    copied: 'Panoya kopyalandı',
+    saved: 'Kaydedildi',
   },
 
   tabs: {
     home: 'Ana sayfa',
     search: 'Keşfet',
     create: 'Ekle',
-    activity: 'Aktivite',
+    activity: 'Bildirimler',
     profile: 'Profil',
   },
 
@@ -64,8 +66,10 @@ export const tr = {
     step1Title: 'Kimliğini oluştur',
     step1Body:
       "Still'de hesabın bir e-posta değil, sana ait bir Nostr kimliğidir.",
-    displayName: 'Görünen ad',
+    displayName: 'Ad soyad',
+    displayNamePlaceholder: 'Ad Soyad',
     username: 'Kullanıcı adı',
+    usernamePlaceholder: 'kullaniciadi',
     continue: 'Devam et',
     step2Title: 'Profilini hazırla',
     step2Body: 'İnsanların seni tanıması için birkaç küçük dokunuş ekle.',
@@ -83,6 +87,8 @@ export const tr = {
     confirmBackupHint: 'Gizli anahtarı güvenli bir yere kaydettim.',
     confirmKey: 'Anahtarımı onayladım',
     neverAsk: 'Still ekibin gizli anahtarını asla istemez.',
+    passcodeNextHint:
+      'Sonraki adımda telefonunun kilit şifresi veya biyometrisi istenecek. Gizli anahtarını yalnızca senin erişebileceğin güvenli alanda saklamak için.',
     revealSecret: 'Gizli anahtarı göster',
     hideSecret: 'Gizli anahtarı gizle',
     backupRequired: 'Devam etmeden önce yedeklemeyi onayla.',
@@ -101,7 +107,8 @@ export const tr = {
     checkRelays: '{{count}} relay bağlı',
     checkTips: 'Öneriler hazır',
     goFeed: 'Akışa git',
-    needName: 'Görünen ad gerekli',
+    needName: 'Ad soyad gerekli',
+    needUsername: 'Kullanıcı adı gerekli',
     needRelay: 'En az bir relay seç',
   },
 
@@ -205,12 +212,12 @@ export const tr = {
   },
 
   activity: {
-    title: 'Aktiviteler',
-    markAllRead: 'Tümünü okundu olarak işaretle',
-    newCount: '{{count}} yeni aktivite',
+    title: 'Bildirimler',
+    markAllRead: 'Tümünü okundu say',
+    newCount: '{{count}} yeni bildirim',
     tabAll: 'Tümü',
     tabMentions: 'Bahsetmeler',
-    emptyTitle: 'Henüz aktivite yok',
+    emptyTitle: 'Henüz bildirim yok',
     emptyMessage: 'Beğeniler, yorumlar ve yeni takipler burada görünecek.',
     emptyMentionsTitle: 'Henüz bahsetme yok',
     emptyMentionsMessage: 'Birisi seni etiketlediğinde burada görünecek.',
@@ -243,7 +250,7 @@ export const tr = {
     replaceImage: 'Görseli değiştir',
     titleLabel: 'Başlık (isteğe bağlı)',
     titlePlaceholder: 'Kısa başlık',
-    titleOptionalPlaceholder: 'Boş bırakırsan açıklamadan üretilir',
+    titleOptionalPlaceholder: 'Başlık (isteğe bağlı)',
     captionLabel: 'Açıklama',
     captionPlaceholder: 'Bir şeyler yaz...',
     publish: 'Paylaş',
@@ -251,6 +258,7 @@ export const tr = {
     publishFailed: 'Yayınlanamadı',
     needImage: 'Yayınlamadan önce bir görsel yükle',
     needTitle: 'Başlık gerekli',
+    published: 'Gönderi paylaşıldı',
     titleTooLong: 'Başlık en fazla {{max}} karakter olabilir',
     captionTooLong: 'Açıklama en fazla {{max}} karakter olabilir',
     previewA11y: 'Seçilen görsel önizlemesi',
@@ -273,6 +281,7 @@ export const tr = {
     share: 'Paylaş',
     uploadFailed: 'Yükleme başarısız',
     publishFailed: 'Yayınlanamadı',
+    published: 'Hikaye paylaşıldı',
     needImage: 'Yayınlamadan önce bir görsel yükle',
     captionTooLong: 'Açıklama en fazla {{max}} karakter olabilir',
     previewA11y: 'Seçilen hikaye görseli',
@@ -283,6 +292,23 @@ export const tr = {
     backToPhoto: 'Fotoğrafa dön',
     expiryHint: 'Bu hikaye 24 saat sonra otomatik olarak kaybolur.',
     pickPlaceholder: 'Hikaye görseli seçmek için dokun',
+  },
+
+  composer: {
+    pickGallery: 'Galeriden seç',
+    change: 'Değiştir',
+    captionPlaceholder: 'Bir şeyler yaz...',
+    storyCaptionLabel: 'Hikayene metin ekle',
+    postCaptionLabel: 'Gönderine metin ekle',
+    storyPickTitle: 'Galerinden bir görsel seç',
+    storyPickBody: 'Dikey bir anı, sadece 24 saatliğine.',
+    postPickTitle: 'Galerinden bir fotoğraf seç',
+    postPickBody: 'Kare veya dikey bir kare; kalıcı paylaşım için.',
+    toolSticker: 'Çıkartma',
+    toolMusic: 'Müzik',
+    toolDraw: 'Çiz',
+    toolEffect: 'Efekt',
+    toolComingSoon: 'Bu araç yakında gelecek.',
   },
 
   storyViewer: {
@@ -329,16 +355,49 @@ export const tr = {
     method: 'Giriş: {{method}}',
     profileAndAccount: 'Profil ve hesap',
     relays: 'Relay bağlantıları',
-    security: 'Güvenlik ve anahtarlar',
+    security: 'Güvenlik',
     privacy: 'Gizlilik',
+    appearance: 'Görünüm',
+    darkMode: 'Karanlık tema',
+    darkModeOn: 'Açık',
+    darkModeOff: 'Kapalı — varsayılan açık tema',
+    language: 'Dil',
+    languageTr: 'Türkçe',
+    languageEn: 'English',
+    languagePickerTitle: 'Dil seç',
     accountSection: 'Hesap',
     notifications: 'Bildirimler',
     uploadImage: 'Görsel yükle',
     logout: 'Oturumu kapat',
     logoutFailed: 'Çıkış başarısız',
-    securityTitle: 'Güvenlik ve anahtarlar',
+    securityTitle: 'Güvenlik',
     securityBody:
       'Gizli anahtarın (nsec) hesabının tek girişi. Still bu anahtarı yalnızca bu cihazın güvenli alanında tutar; sunucuya göndermez. Kaybedersen hesabı geri alamazsın. Yedeklerini çevrimdışı ve güvende sakla.',
+  },
+
+  security: {
+    title: 'Güvenlik',
+    heroTitle: 'Hesabını güvende tut',
+    heroBody:
+      "Recovery key'in Nostr kimliğinin tek kurtarma yoludur. Kimseyle paylaşma.",
+    accessTitle: "Private key'e eriş",
+    accessBody:
+      'Doğrula’ya basınca telefonunun biyometri veya ekran kilidi şifresi istenir. Uygulama içi şifre yoktur.',
+    bunkerBody:
+      'Bu oturum bir bunker ile bağlı. Private key bu cihazda saklanmıyor.',
+    verify: 'Doğrula',
+    unlockFailed: 'Doğrulama başarısız',
+    noLocalKey: 'Bu cihazda yerel private key bulunamadı.',
+    recoveryKey: 'Recovery key',
+    showKey: 'Anahtarı göster',
+    hideKey: 'Anahtarı gizle',
+    copyKey: 'Kopyala',
+    copied: 'Kopyalandı',
+    hideAgain: 'Gizle',
+    keyStoredTitle: 'Private key',
+    keyStoredBody: 'Cihazın güvenli deposunda saklanır.',
+    localTitle: 'Yerel koruma',
+    localBody: 'Export işlemi cihaz doğrulaması ister.',
   },
 
   profile: {
@@ -380,12 +439,15 @@ export const tr = {
   },
 
   editProfile: {
-    title: 'Profili düzenle',
+    title: 'Profil ve hesap',
     body: 'İsim soyisim herkese görünür. Kullanıcı adı @ile gösterilir. İstersen doğrulanmış kullanıcı adı ekleyebilirsin.',
-    displayName: 'İsim soyisim',
+    displayName: 'Ad soyad',
     name: 'Kullanıcı adı',
-    about: 'Hakkında',
+    about: 'Biyografi',
+    aboutPlaceholder: 'Fikirler, fotoğraflar ve iyi hissettiren anlar.',
     picture: 'Profil fotoğrafı bağlantısı',
+    publicKey: 'Public key',
+    copyPublicKey: 'Public key kopyala',
     nip05: 'Doğrulanmış kullanıcı adı',
     nip05Placeholder: 'isim@ornek.com',
     nip05HelpTitle: 'Doğrulanmış kullanıcı adı nedir?',
@@ -420,8 +482,10 @@ export const tr = {
   },
 
   relays: {
-    title: 'Bağlantı sunucuları',
+    title: 'Relay bağlantıları',
     body: 'Okuma ve yazma için yaklaşık {{min}}-{{max}} sunucu tut. Yayınlarken yazma listesi tercih edilir.',
+    infoTitle: 'Ağın senin kontrolünde',
+    infoBody: "İçeriklerini farklı relay'lerde senkronize et.",
     loadFailed: 'Sunucular yüklenemedi',
     emptyTitle: 'Henüz sunucu yok',
     emptyMessage: 'Başlamak için bir sunucu adresi ekle.',
@@ -434,8 +498,22 @@ export const tr = {
     addPlaceholder: 'wss://ornek.com',
     add: 'Sunucu ekle',
     savePublish: 'Kaydet ve yayınla',
+    testConnection: 'Bağlantıyı test et',
+    testOk: '{{count}} sunucu bağlı',
+    testOkOne: '1 sunucu bağlı',
+    testFail: 'Hiçbir sunucuya bağlanılamadı',
+    testPartial: '{{connected}} / {{total}} sunucu bağlı',
+    saved: 'Relay listesi kaydedildi',
+    added: 'Sunucu listeye eklendi',
+    moreA11y: 'Relay seçenekleri',
+    defaultRelay: 'Varsayılan relay',
+    statusConnectedLabel: 'Bağlı',
     read: 'Oku',
     write: 'Yaz',
+    enableRead: 'Okumayı aç',
+    disableRead: 'Okumayı kapat',
+    enableWrite: 'Yazmayı aç',
+    disableWrite: 'Yazmayı kapat',
     remove: 'Kaldır',
     statusConnected: 'bağlı',
     statusReconnecting: 'yeniden bağlanıyor',
@@ -446,32 +524,3 @@ export const tr = {
 } as const;
 
 export type TrStrings = typeof tr;
-
-type NestedValue = string | {[key: string]: NestedValue};
-
-function lookup(path: string): string | undefined {
-  const parts = path.split('.');
-  let node: NestedValue | undefined = tr as unknown as NestedValue;
-  for (const part of parts) {
-    if (node === undefined || typeof node === 'string') {
-      return undefined;
-    }
-    node = node[part];
-  }
-  return typeof node === 'string' ? node : undefined;
-}
-
-/** Interpolate `{{key}}` placeholders. */
-export function t(
-  path: string,
-  vars?: Readonly<Record<string, string | number>>,
-): string {
-  const template = lookup(path) ?? path;
-  if (!vars) {
-    return template;
-  }
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
-    const value = vars[key];
-    return value === undefined ? `{{${key}}}` : String(value);
-  });
-}

@@ -259,6 +259,7 @@ export function FeedScreen({navigation}: FeedScreenProps): React.JSX.Element {
     ({item}: {item: ImagePost}) => (
       <FeedPostCard
         post={item}
+        variant="detail"
         reaction={reactions.byEventId.get(item.id)}
         likePending={pendingLikeId === item.id}
         nowSec={nowSec}
@@ -447,11 +448,11 @@ function createStyles(theme: Theme, paddingTop: number) {
     },
     brand: {
       color: theme.colors.text.primary,
-      fontSize: 28,
-      lineHeight: 34,
+      fontSize: 22,
+      lineHeight: 28,
       fontWeight: '700',
       fontStyle: 'italic',
-      letterSpacing: -0.4,
+      letterSpacing: -0.3,
     },
     topActions: {
       flexDirection: 'row',
@@ -491,7 +492,6 @@ function createStyles(theme: Theme, paddingTop: number) {
     listContent: {
       paddingTop: theme.spacing.xs,
       paddingBottom: theme.spacing.lg,
-      gap: theme.spacing.md,
       flexGrow: 1,
     },
     fatal: {

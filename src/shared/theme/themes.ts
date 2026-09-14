@@ -69,21 +69,21 @@ const darkColors = buildColors(
 
 const lightColors = buildColors(
   {
-    primary: '#F6F3EC',
-    secondary: '#EBE6DB',
+    primary: '#FAFAF8',
+    secondary: '#F2F1ED',
     elevated: '#FFFFFF',
-    surface: '#F0EBE1',
+    surface: '#F5F4F0',
   },
   {
-    primary: '#1A1814',
-    secondary: '#5C574E',
-    disabled: '#9A9488',
-    inverse: '#F4F0E6',
+    primary: '#141311',
+    secondary: '#5F5C56',
+    disabled: '#9B978F',
+    inverse: '#FAFAF8',
   },
   {
-    default: '#D8D2C6',
-    subtle: '#E5DFD3',
-    strong: '#B8B0A2',
+    default: '#E4E2DC',
+    subtle: '#EEECE7',
+    strong: '#C9C5BC',
   },
   '#3D2A08',
   {

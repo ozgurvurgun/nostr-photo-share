@@ -50,7 +50,9 @@ export function ActivityScreen(_props: ActivityScreenProps): React.JSX.Element {
               pressed ? styles.pressed : null,
             ]}>
             <Icon name="check" size={14} color={theme.colors.accent.primary} />
-            <Text style={styles.markReadLabel}>{t('activity.markAllRead')}</Text>
+            <Text numberOfLines={1} style={styles.markReadLabel}>
+              {t('activity.markAllRead')}
+            </Text>
           </Pressable>
         </View>
         <View style={styles.tabs}>
@@ -114,10 +116,10 @@ function createStyles(theme: Theme, paddingTop: number) {
     },
     title: {
       color: theme.colors.text.primary,
-      fontSize: theme.typography.display.fontSize,
-      lineHeight: theme.typography.display.lineHeight,
-      fontWeight: theme.typography.display.fontWeight,
-      letterSpacing: theme.typography.display.letterSpacing,
+      fontSize: theme.typography.title.fontSize,
+      lineHeight: theme.typography.title.lineHeight,
+      fontWeight: theme.typography.title.fontWeight,
+      letterSpacing: theme.typography.title.letterSpacing,
     },
     subtitle: {
       color: theme.colors.text.secondary,
@@ -132,13 +134,12 @@ function createStyles(theme: Theme, paddingTop: number) {
       borderRadius: theme.radius.full,
       paddingHorizontal: theme.spacing.sm,
       minHeight: 32,
-      maxWidth: 168,
+      flexShrink: 0,
     },
     markReadLabel: {
       color: theme.colors.text.secondary,
       fontSize: 11,
       fontWeight: '600',
-      flexShrink: 1,
     },
     tabs: {
       flexDirection: 'row',
